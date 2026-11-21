@@ -32,6 +32,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0019 | Lessons from LifeOS (same VPS) | learning |
 | 0020 | Every release doc gets its own version | decision |
 | 0021 | Task type decides the version bump, plus commit message rule | decision |
+| 0022 | Market data by REST polling from Delta testnet (Phase 2 slice 1) | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.
@@ -48,7 +49,7 @@ Topic folders are named `NN-topic/` with the next free two-digit number (never r
 | `06-databases/` | PostgreSQL, schema, migrations, Redis |
 | `07-kafka-and-events/` | Event, topic, producer/consumer, Kafka kyun |
 | `08-order-lifecycle/` | Order state machine, idempotency, reconciliation |
-| `09-exchange-connector/` | Adapter pattern, Delta Exchange, API keys, rate limits |
+| `09-exchange-connector/` | Adapter pattern, Delta Exchange, API keys, rate limits, instruments, candles |
 | `10-backtesting-and-learning/` | Backtest, lookahead, overfitting, shadow/paper, model registry |
 | `11-ai-llm-usage/` | LLM kahan use karna hai aur kahan nahi |
 | `12-devops-basics/` | Docker, compose, CI, secrets, testnet vs live |

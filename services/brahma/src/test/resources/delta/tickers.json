@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "result": [
+    {
+      "symbol": "SOLUSD",
+      "product_id": 92572,
+      "mark_price": "68.84954549",
+      "timestamp": 1795260272421850,
+      "quotes": {
+        "best_bid": "68.843",
+        "best_ask": "68.861"
+      },
+      "close": 68.823
+    },
+    {
+      "symbol": "ETHUSD",
+      "product_id": 1699,
+      "mark_price": "1640.01374311",
+      "timestamp": 1795260272421850,
+      "quotes": {
+        "best_bid": "1639.55",
+        "best_ask": "1639.6"
+      },
+      "close": 1639.6
+    },
+    {
+      "symbol": "BTCUSD",
+      "product_id": 84,
+      "mark_price": "57888.60127095",
+      "timestamp": 1795260272421850,
+      "quotes": {
+        "best_bid": "57877.5",
+        "best_ask": "57878"
+      },
+      "close": 57877.5
+    }
+  ]
+}

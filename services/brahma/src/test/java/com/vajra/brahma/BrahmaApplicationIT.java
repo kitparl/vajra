@@ -3,9 +3,8 @@ package com.vajra.brahma;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
+import com.vajra.brahma.testsupport.HttpTestClient;
+import com.vajra.brahma.testsupport.TestDatabase;
 import java.net.http.HttpResponse;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "vajra.scheduling.enabled=false")
 class BrahmaApplicationIT {
 
     @Container
@@ -61,16 +60,5 @@ class BrahmaApplicationIT {
                 .properties("DB_URL=jdbc:postgresql://localhost:1/vajra", "DB_USER=core_svc", "server.port=0");
 
         assertThatThrownBy(app::run).hasStackTraceContaining("DB_PASSWORD");
-    }
-}
-
-final class HttpTestClient {
-    private static final HttpClient CLIENT = HttpClient.newHttpClient();
-
-    private HttpTestClient() {}
-
-    static HttpResponse<String> get(int port, String path) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).build();
-        return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
     }
 }

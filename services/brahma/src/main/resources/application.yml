@@ -23,3 +23,8 @@ management:
     web:
       exposure:
         include: health
+
+vajra:
+  marketdata:
+    # Symbols that get quotes, candles and (later) trading. Others are stored in the instrument master only.
+    symbols: BTCUSD,ETHUSD

@@ -2,6 +2,8 @@ package com.vajra.brahma;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.vajra.brahma.testsupport.HttpTestClient;
+import com.vajra.brahma.testsupport.TestDatabase;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +16,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /** Own container, because this test stops it. */
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "vajra.scheduling.enabled=false")
 class BrahmaDatabaseDownIT {
 
     @Container

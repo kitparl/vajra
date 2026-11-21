@@ -31,6 +31,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0018 | Phase 1 build decisions, versions and memory measurements | decision |
 | 0019 | Lessons from LifeOS (same VPS) | learning |
 | 0020 | Every release doc gets its own version | decision |
+| 0021 | Task type decides the version bump, plus commit message rule | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.

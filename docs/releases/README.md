@@ -22,10 +22,15 @@ current: 1.0.2
 - `current`: the version of the latest release doc.
 
 ## How a version number is chosen
-Read `current` from `VERSION` and apply the bump of the new change:
-- **major** (breaking change): `X+1.0.0`, for example `1.4.2` -> `2.0.0`
-- **minor** (new backward-compatible feature): `X.Y+1.0`, for example `1.0.2` -> `1.1.0`
-- **patch** (bug fix or small improvement): `X.Y.Z+1`, for example `1.0.2` -> `1.0.3`
+The bump comes from what the task is called:
+
+| Task | Bump | Example |
+|---|---|---|
+| feature | major: `X+1.0.0` | `1.4.2` -> `2.0.0` |
+| enhancement | minor: `X.Y+1.0` | `1.0.2` -> `1.1.0` |
+| bug | patch: `X.Y.Z+1` | `1.0.2` -> `1.0.3` |
+
+Read `current` from `VERSION` and apply the bump.
 
 Then create `<new version>-<slug>.md` and set `current` in `VERSION` to the new version. The very first change of the project is `1.0.0`.
 

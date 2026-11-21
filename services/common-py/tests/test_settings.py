@@ -23,3 +23,16 @@ def test_reads_all_values_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert settings.db_user == "signal_svc"
     assert settings.db_password.get_secret_value() == "secret"
+
+
+@pytest.mark.parametrize("name", ["DB_URL", "DB_USER", "DB_PASSWORD"])
+def test_empty_value_counts_as_missing(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+    monkeypatch.setenv("DB_URL", "postgresql+psycopg://localhost:5432/vajra")
+    monkeypatch.setenv("DB_USER", "signal_svc")
+    monkeypatch.setenv("DB_PASSWORD", "secret")
+    monkeypatch.setenv(name, "")
+
+    with pytest.raises(ValidationError) as error:
+        DatabaseSettings()
+
+    assert name.lower() in str(error.value)

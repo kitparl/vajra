@@ -19,3 +19,7 @@ path = "hatch_build.py"
 [tool.ruff]
 # Same lint/format rules as the services workspace.
 extend = "../../services/pyproject.toml"
+
+[tool.uv]
+# Rebuild (re-run protoc) whenever a .proto or the build hook changes, not only when this file changes.
+cache-keys = [{ file = "pyproject.toml" }, { file = "hatch_build.py" }, { file = "../proto/**/*.proto" }]

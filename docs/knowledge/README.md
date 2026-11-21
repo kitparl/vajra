@@ -22,6 +22,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0009 | Backtesting and learning pitfalls | learning |
 | 0010 | Build phases and roadmap | design |
 | 0011 | Backend uses only Java and Python (no NestJS) | decision |
+| 0012 | Repository layout (monorepo) | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish with small examples, from basic to advanced. Read them in this order if you are new.

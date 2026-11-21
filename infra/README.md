@@ -1,6 +1,6 @@
 # infra
 
-Local and deployment infrastructure. Details: `docs/knowledge/0016`, `0018`.
+Local and deployment infrastructure. Details: `docs/knowledge/0016-database-roles-and-migrations.md`, `docs/knowledge/0018-phase1-build-decisions-and-measurements.md`.
 
 - `compose/compose.yaml` — base stack (Postgres 18, Kafka, Redis, services) with memory limits; publishes no ports; reused on the VPS later.
 - `compose/compose.dev.yaml` — laptop override: publishes ports (Postgres 15432, Redis 16379, services 8080-8092).

@@ -7,4 +7,4 @@ Startup plumbing shared by shankha and manthan. **No business logic here.**
 - `health.health_router` — `GET /health`: 200 UP / 503 DOWN.
 - `migrations.run_online` / `run_migrations` — Alembic in the service's own schema.
 
-Why it exists: `docs/knowledge/0016`, `0018`.
+Why it exists: `docs/knowledge/0016-database-roles-and-migrations.md`, `docs/knowledge/0018-phase1-build-decisions-and-measurements.md`.

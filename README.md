@@ -25,7 +25,7 @@ docs/releases/      Release notes
 ```
 
 ## Quick start (laptop)
-Needs Docker, Java 25, Maven, uv, buf. Details: `docs/knowledge/0018`.
+Needs Docker, Java 25, Maven, uv, buf. Details: `docs/knowledge/0018-phase1-build-decisions-and-measurements.md`.
 ```
 cp infra/compose/.env.example infra/compose/.env
 scripts/compose.sh up -d --build && scripts/check-memory.sh

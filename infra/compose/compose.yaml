@@ -32,7 +32,9 @@ services:
     mem_limit: 512m
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vajra"]
+      # TCP, not the unix socket: during first-time init the temporary server answers on the socket
+      # before the init script has created roles and schemas.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d vajra"]
       interval: 5s
       timeout: 3s
       retries: 20

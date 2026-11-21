@@ -21,5 +21,7 @@ RUN addgroup -S app && adduser -S app -G app
 USER app
 COPY --from=build /app.jar /app/app.jar
 # Sized for a 384 MB container limit (0014); re-check with scripts/check-memory.sh.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+# Heap ~192 MB + metaspace 96 + code cache 48 + direct 32 + stacks/internals leaves headroom below the limit,
+# so a heap OOM is a Java error, not a kernel kill (exit 137). C1-only saves memory; revisit for Phase 2 hot paths.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50 -XX:MaxDirectMemorySize=32m -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

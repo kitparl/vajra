@@ -17,13 +17,15 @@ jobs:
           fetch-depth: 0
       - uses: bufbuild/buf-action@v1
         with:
-          input: contracts
-          lint: true
-          format: false
-          # On pull requests, fail if a proto change breaks wire compatibility with main.
-          breaking: ${{ github.event_name == 'pull_request' }}
-          breaking_against: ${{ github.event.repository.clone_url }}#branch=main,subdir=contracts
-          push: false
+          setup_only: true
+      - name: Lint
+        run: buf lint contracts
+      # Fail if a proto change breaks wire compatibility: PRs compare with main,
+      # pushes to main compare with the previous commit (direct pushes are checked too).
+      - name: Breaking change check
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && 'origin/main' || github.event.before }}
+        run: scripts/check-proto-breaking.sh "$BASE"
 
   java:
     runs-on: ubuntu-latest
@@ -34,7 +36,9 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
-          cache-dependency-path: services/**/pom.xml
+          cache-dependency-path: |
+            services/**/pom.xml
+            contracts/java/pom.xml
       - name: Build and test (unit + Testcontainers integration tests)
         working-directory: services
         run: mvn -B verify

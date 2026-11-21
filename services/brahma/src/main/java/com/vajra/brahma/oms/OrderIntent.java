@@ -1,0 +1,43 @@
+package com.vajra.brahma.oms;
+
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.Objects;
+
+/** What the caller asks for. The idempotency key identifies the request; every other field is its body. */
+public record OrderIntent(
+        String idempotencyKey,
+        String symbol,
+        Side side,
+        OrderType type,
+        long size,
+        BigDecimal limitPrice,
+        TimeInForce timeInForce,
+        boolean reduceOnly,
+        OrderSource source) {
+
+    /**
+     * SHA-256 hex of every field except the key. A replay with the same key must have the same hash. Prices are
+     * compared by value ({@code 50000} and {@code 50000.0} hash the same).
+     */
+    public String requestHash() {
+        String body = String.join("|",
+                Objects.toString(symbol, ""),
+                Objects.toString(side, ""),
+                Objects.toString(type, ""),
+                Long.toString(size),
+                limitPrice == null ? "" : limitPrice.stripTrailingZeros().toPlainString(),
+                Objects.toString(timeInForce, ""),
+                Boolean.toString(reduceOnly),
+                Objects.toString(source, ""));
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(body.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+}

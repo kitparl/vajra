@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package vajra.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "com.vajra.contracts.events.v1";
+
+// Emitted whenever an order is created or changes state. All decimals are strings.
+message OrderUpdated {
+  string order_id = 1;
+  string client_order_id = 2;
+  string venue = 3;
+  string symbol = 4;
+  string side = 5;
+  string order_type = 6;
+  int64 size = 7;
+  string limit_price = 8;
+  string time_in_force = 9;
+  bool reduce_only = 10;
+  string state = 11;
+  int64 filled_size = 12;
+  string avg_fill_price = 13;
+  string fees = 14;
+  string reason = 15;
+  string source = 16;
+  google.protobuf.Timestamp updated_at = 17;
+}

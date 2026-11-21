@@ -1,6 +1,7 @@
 package com.vajra.brahma.connector;
 
-/** Where orders and market data come from. PAPER arrives in slice 2. */
+/** Where orders and market data come from. PAPER is the simulated venue. */
 public enum Venue {
-    DELTA_TESTNET
+    DELTA_TESTNET,
+    PAPER
 }

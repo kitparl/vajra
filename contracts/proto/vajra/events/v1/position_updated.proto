@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package vajra.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "com.vajra.contracts.events.v1";
+
+// Emitted when a position changes. All decimals are strings.
+message PositionUpdated {
+  string venue = 1;
+  string symbol = 2;
+  // Signed: positive long, negative short.
+  int64 size = 3;
+  string avg_entry_price = 4;
+  string realized_pnl = 5;
+  string fees_paid = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

@@ -33,6 +33,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0020 | Every release doc gets its own version | decision |
 | 0021 | Task type decides the version bump, plus commit message rule | decision |
 | 0022 | Market data by REST polling from Delta testnet (Phase 2 slice 1) | decision |
+| 0023 | Order management and paper trading in brahma (Phase 2 slice 2) | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.

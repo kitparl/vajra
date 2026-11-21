@@ -28,3 +28,6 @@ vajra:
   marketdata:
     # Symbols that get quotes, candles and (later) trading. Others are stored in the instrument master only.
     symbols: BTCUSD,ETHUSD
+  trading:
+    # PAPER (default) or DELTA_TESTNET. Slice 2 has no testnet trading venue: non-paper orders are risk-rejected.
+    mode: ${TRADING_MODE:PAPER}

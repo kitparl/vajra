@@ -24,22 +24,31 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0011 | Backend uses only Java and Python (no NestJS) | decision |
 | 0012 | Repository layout (monorepo) | decision |
 | 0013 | Service folder names (Sanskrit) | decision |
+| 0014 | Deployment split - live path on VPS, research on laptop | decision |
+| 0015 | Topic folders get a number prefix | decision |
+| 0016 | Database roles, schemas and migrations (Phase 1) | design |
+| 0017 | Contracts pipeline (Protobuf, buf, code generation) | design |
+| 0018 | Phase 1 build decisions, versions and memory measurements | decision |
+| 0019 | Lessons from LifeOS (same VPS) | learning |
+| 0020 | Every release doc gets its own version | decision |
 
 ## Hinglish topic notes (beginner friendly)
-Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish with small examples, from basic to advanced. Read them in this order if you are new.
+Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.
+
+Topic folders are named `NN-topic/` with the next free two-digit number (never renumbered or reused). A new topic goes at the end of this table.
 
 | Folder | Kya seekhoge |
 |---|---|
-| `trading-basics/` | Spot, futures, leverage, liquidation, order types, candles |
-| `risk-management/` | Stop loss, position size, drawdown, risk engine, kill-switch |
-| `architecture-basics/` | Service, monolith vs microservices, API, data ownership |
-| `java-spring-boot/` | Spring Boot kya hai, layers, scheduler, WebSocket |
-| `python-fastapi/` | FastAPI, Pydantic, Python kyun ML ke liye |
-| `databases/` | PostgreSQL, schema, migrations, Redis |
-| `kafka-and-events/` | Event, topic, producer/consumer, Kafka kyun |
-| `order-lifecycle/` | Order state machine, idempotency, reconciliation |
-| `exchange-connector/` | Adapter pattern, Delta Exchange, API keys, rate limits |
-| `backtesting-and-learning/` | Backtest, lookahead, overfitting, shadow/paper, model registry |
-| `ai-llm-usage/` | LLM kahan use karna hai aur kahan nahi |
-| `devops-basics/` | Docker, compose, CI, secrets, testnet vs live |
-| `frontend-angular/` | Terminal UI, Angular basics, UI sirf gateway se baat karta hai |
+| `01-trading-basics/` | Spot, futures, leverage, liquidation, order types, candles |
+| `02-risk-management/` | Stop loss, position size, drawdown, risk engine, kill-switch |
+| `03-architecture-basics/` | Service, monolith vs microservices, API, data ownership |
+| `04-java-spring-boot/` | Spring Boot kya hai, layers, scheduler, WebSocket |
+| `05-python-fastapi/` | FastAPI, Pydantic, Python kyun ML ke liye |
+| `06-databases/` | PostgreSQL, schema, migrations, Redis |
+| `07-kafka-and-events/` | Event, topic, producer/consumer, Kafka kyun |
+| `08-order-lifecycle/` | Order state machine, idempotency, reconciliation |
+| `09-exchange-connector/` | Adapter pattern, Delta Exchange, API keys, rate limits |
+| `10-backtesting-and-learning/` | Backtest, lookahead, overfitting, shadow/paper, model registry |
+| `11-ai-llm-usage/` | LLM kahan use karna hai aur kahan nahi |
+| `12-devops-basics/` | Docker, compose, CI, secrets, testnet vs live |
+| `13-frontend-angular/` | Terminal UI, Angular basics, UI sirf gateway se baat karta hai |

@@ -1,0 +1,138 @@
+# Base stack, reused on the VPS later (0014). No published ports here.
+# Memory limits are the 0014 budget; check with scripts/check-memory.sh.
+name: vajra
+
+x-java-health: &java-health
+  test: ["CMD-SHELL", "wget -qO- http://localhost:$${PORT}/actuator/health | grep -q UP"]
+  interval: 10s
+  timeout: 3s
+  retries: 18
+
+x-python-health: &python-health
+  test: ["CMD", "python", "-c", "import os, urllib.request as u; u.urlopen('http://localhost:' + os.environ['PORT'] + '/health', timeout=2)"]
+  interval: 10s
+  timeout: 3s
+  retries: 18
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE}
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=50"]
+    environment:
+      POSTGRES_DB: vajra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      CORE_DB_PASSWORD: ${CORE_DB_PASSWORD}
+      RISK_DB_PASSWORD: ${RISK_DB_PASSWORD}
+      GATEWAY_DB_PASSWORD: ${GATEWAY_DB_PASSWORD}
+      RESEARCH_DB_PASSWORD: ${RESEARCH_DB_PASSWORD}
+      SIGNAL_DB_PASSWORD: ${SIGNAL_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vajra"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: ${KAFKA_IMAGE}
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: -Xmx320m -Xms320m
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      # Plain TCP probe: a kafka-*.sh probe would start a second JVM inside the 512 MB limit.
+      test: ["CMD-SHELL", "nc -z localhost 9092"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: ${REDIS_IMAGE}
+    command: ["redis-server", "--maxmemory", "48mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    mem_limit: 64m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  brahma:
+    build: { context: ../.., dockerfile: services/java.Dockerfile, args: { SERVICE: brahma } }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/vajra
+      DB_USER: core_svc
+      DB_PASSWORD: ${CORE_DB_PASSWORD}
+      PORT: 8081
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck: *java-health
+
+  maryada:
+    build: { context: ../.., dockerfile: services/java.Dockerfile, args: { SERVICE: maryada } }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/vajra
+      DB_USER: risk_svc
+      DB_PASSWORD: ${RISK_DB_PASSWORD}
+      PORT: 8082
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck: *java-health
+
+  dvara:
+    build: { context: ../.., dockerfile: services/java.Dockerfile, args: { SERVICE: dvara } }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/vajra
+      DB_USER: gateway_svc
+      DB_PASSWORD: ${GATEWAY_DB_PASSWORD}
+      PORT: 8080
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck: *java-health
+
+  shankha:
+    build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: shankha, PORT: 8091 } }
+    environment:
+      DB_URL: postgresql+psycopg://postgres:5432/vajra
+      DB_USER: signal_svc
+      DB_PASSWORD: ${SIGNAL_DB_PASSWORD}
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 256m
+    restart: unless-stopped
+    healthcheck: *python-health
+
+  # research-service runs on the laptop only (0014): scripts/compose.sh --profile research up -d manthan
+  manthan:
+    profiles: ["research"]
+    build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: manthan, PORT: 8092 } }
+    environment:
+      DB_URL: postgresql+psycopg://postgres:5432/vajra
+      DB_USER: research_svc
+      DB_PASSWORD: ${RESEARCH_DB_PASSWORD}
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: unless-stopped
+    healthcheck: *python-health
+
+volumes:
+  pgdata:
+  kafkadata:

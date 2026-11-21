@@ -1,0 +1,18 @@
+[project]
+name = "shankha"
+version = "0.1.0"
+description = "signal-service: runs strategies and promoted models, publishes signals (schema signal)."
+requires-python = "==3.14.*"
+dependencies = [
+    "vajra-common",
+    "vajra-contracts",
+    "uvicorn==0.54.0",
+]
+
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+vajra-common = { workspace = true }
+vajra-contracts = { path = "../../contracts/python" }

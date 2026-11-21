@@ -1,8 +1,7 @@
 ---
-version: 1.0.0
+version: X.Y.Z          # must match the file name <version>-<slug>.md
 bump: major            # major | minor | patch
 date: YYYY-MM-DD
-status: unreleased     # unreleased | released
 services: [core-service]   # core-service, risk-service, research-service, signal-service, gateway-bff, ui, contracts, infra
 ---
 

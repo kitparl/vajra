@@ -6,6 +6,8 @@ created: 2026-11-21
 status: current
 ---
 
+Superseded in part by: 0017 (proto folder layout), 0018 (shared startup helpers `services/common`, `services/common-py`).
+
 # Repository layout (monorepo)
 
 Folder names under `services/` corrected per 0013 (Sanskrit folder names).

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package vajra.common.v1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "com.vajra.contracts.common.v1";
+
+// Wrapper for every Kafka event. Gives the audit log one uniform id and time.
+message EventEnvelope {
+  // Unique id of this event (UUID string). Consumers use it for de-duplication.
+  string event_id = 1;
+  // Dotted event name, e.g. "order.updated".
+  string event_type = 2;
+  // When the event happened at the producer.
+  google.protobuf.Timestamp occurred_at = 3;
+  // Service that produced the event, e.g. "core-service".
+  string producer = 4;
+  // The event body.
+  google.protobuf.Any payload = 5;
+}

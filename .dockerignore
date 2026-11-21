@@ -1,0 +1,11 @@
+**/target
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/build
+.git
+.superpowers
+docs
+infra/compose/.env
+**/.DS_Store

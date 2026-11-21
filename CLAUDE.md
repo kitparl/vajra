@@ -32,7 +32,7 @@ When a development task is finished (code done, tests pass), BEFORE ending your 
   - **major** = breaking change (API/contract/DB incompatible, behavior change)
   - **minor** = new backward-compatible feature
   - **patch** = bug fix or small improvement
-- Then follow `docs/releases/README.md` exactly: compute the version number automatically, create a NEW file (never edit released files), and update `docs/releases/VERSION`.
+- Then follow `docs/releases/README.md` exactly: every change gets its own version, computed automatically from `current` in `docs/releases/VERSION` (patch `1.0.2` -> `1.0.3`, minor -> `1.1.0`, major -> `2.0.0`). Create a NEW file `docs/releases/<version>-<slug>.md` (never edit pushed release docs), and update `current` in `docs/releases/VERSION`.
 
 ## Knowledge documentation rule (docs/knowledge)
 `docs/knowledge/` is the project's long-term memory and is committed with the project.
@@ -41,8 +41,9 @@ When a development task is finished (code done, tests pass), BEFORE ending your 
 - Edit an old file only to fix mistakes or mark it superseded (add a `Superseded by: NNNN` line); do not rewrite history.
 - After adding one, mention it to the user in one line. Do not ask permission for knowledge docs.
 
-## Hinglish topic notes (docs/knowledge/<topic>/)
-Besides the numbered files, `docs/knowledge/` has **topic folders** (for example `trading-basics/`, `risk-management/`) with beginner-friendly notes in **Hinglish**, explained with small real-life examples.
+## Hinglish topic notes (docs/knowledge/NN-<topic>/)
+Besides the numbered files, `docs/knowledge/` has **topic folders** (for example `01-trading-basics/`, `02-risk-management/`) with beginner-friendly notes in **Hinglish**, explained with small real-life examples.
+- Topic folders are named `NN-topic` with the **next free two-digit number** (reading order). Never renumber or reuse; a new topic is appended at the end of the `docs/knowledge/README.md` topic table.
 - When you add a new concept or feature, also add or extend the note in the matching topic folder (create a new topic folder if none fits). Files in topic folders are named by topic (`NN-slug.md`), not by the global number.
 - Style: very simple language, small example first, then project usage. Keep the folder's `README.md` and `docs/knowledge/README.md` topic table updated.
 

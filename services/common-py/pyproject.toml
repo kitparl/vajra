@@ -1,0 +1,16 @@
+[project]
+name = "vajra-common"
+version = "0.1.0"
+description = "Small startup helpers shared by the Python services. No business logic."
+requires-python = "==3.14.*"
+dependencies = [
+    "fastapi==0.165.0",
+    "sqlalchemy==2.1.9",
+    "psycopg[binary]==3.3.9",
+    "alembic==1.20.1",
+    "pydantic-settings==2.16.3",
+]
+
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"

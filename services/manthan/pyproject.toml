@@ -1,0 +1,18 @@
+[project]
+name = "manthan"
+version = "0.1.0"
+description = "research-service: features, backtests, training, model registry (schema research). Laptop only (0014)."
+requires-python = "==3.14.*"
+dependencies = [
+    "vajra-common",
+    "vajra-contracts",
+    "uvicorn==0.54.0",
+]
+
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+vajra-common = { workspace = true }
+vajra-contracts = { path = "../../contracts/python" }

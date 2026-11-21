@@ -1,0 +1,29 @@
+# uv workspace for all Python services. Every Python dependency version is pinned here
+# or in a member's pyproject.toml, and locked once in services/uv.lock.
+[tool.uv.workspace]
+members = ["common-py", "shankha", "manthan"]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.6",
+    "testcontainers==4.15.0",
+    "httpx2==2.16.2",
+    "vajra-contracts",
+]
+
+[tool.uv]
+required-version = ">=0.9"
+
+[tool.uv.sources]
+vajra-contracts = { path = "../contracts/python" }
+
+[tool.pytest.ini_options]
+testpaths = ["../contracts/python/tests", "common-py/tests", "shankha/tests", "manthan/tests"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

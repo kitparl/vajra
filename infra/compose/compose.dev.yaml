@@ -1,0 +1,17 @@
+# Local dev override: publishes ports to the laptop.
+# Postgres/Redis use 15432/16379 so they do not clash with LifeOS dev (5432/6379) on the same laptop.
+services:
+  postgres:
+    ports: ["15432:5432"]
+  redis:
+    ports: ["16379:6379"]
+  dvara:
+    ports: ["8080:8080"]
+  brahma:
+    ports: ["8081:8081"]
+  maryada:
+    ports: ["8082:8082"]
+  shankha:
+    ports: ["8091:8091"]
+  manthan:
+    ports: ["8092:8092"]

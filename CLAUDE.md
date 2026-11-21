@@ -36,7 +36,7 @@ When a development task is finished (code done, tests pass), BEFORE ending your 
 - Then follow `docs/releases/README.md` exactly: every change gets its own version, computed automatically from `current` in `docs/releases/VERSION` (patch `1.0.2` -> `1.0.3`, minor -> `1.1.0`, major -> `2.0.0`). Create a NEW file `docs/releases/<version>-<slug>.md` (never edit pushed release docs), and update `current` in `docs/releases/VERSION`.
 
 ## Commit message rule
-When a development task is finished, always end with a suggested commit message (Conventional Commits style: `feat:` for feature, `feat:`/`refactor:` for enhancement, `fix:` for bug, `docs:` for docs only; short subject line plus bullet body). Only suggest it; never run `git commit` yourself (rule 9). If staged changes contain unrelated work, say so and suggest a split.
+When a development task is finished, suggest a commit message **exactly once**, in the final message after the release-doc question is resolved (after the release doc is written, so it is included; or after the user says they are not pushing). Never also include it in the "Development complete" message. Format: a commit message (Conventional Commits style: `feat:` for feature, `feat:`/`refactor:` for enhancement, `fix:` for bug, `docs:` for docs only; short subject line plus bullet body). Only suggest it; never run `git commit` yourself (rule 9). If staged changes contain unrelated work, say so and suggest a split.
 
 ## Knowledge documentation rule (docs/knowledge)
 `docs/knowledge/` is the project's long-term memory and is committed with the project.

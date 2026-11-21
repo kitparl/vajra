@@ -31,7 +31,7 @@ Where versions live (one place per ecosystem): Java in `services/pom.xml`; Pytho
 - **Shared startup helpers** (corrects "no shared code yet" in 0012): `services/common` (Java, `RequiredEnvironment`) and `services/common-py` (`vajra_common`: settings, engine, health, Alembic helper). Only startup plumbing that every service needs; no business logic may go there.
 - One Dockerfile per language: `services/java.Dockerfile` and `services/python.Dockerfile`, with `ARG SERVICE`.
 - Compose: `infra/compose/compose.yaml` (base, VPS-ready, no published ports) + `compose.dev.yaml` (laptop ports). Wrapper: `scripts/compose.sh`.
-- Dev ports: dvara 8080, brahma 8081, maryada 8082, shankha 8091, manthan 8092, Postgres **15432**, Redis **16379** (5432/6379 are used by LifeOS dev on the same laptop).
+- Dev ports: dvara 8080, brahma 8081, maryada 8082, shankha 8091, manthan 8092, Postgres **15432**, Redis **16379** (5432/6379 are used by LifeOS dev on the same laptop). Dev ports bind to `127.0.0.1` only, never the LAN.
 
 ## Memory at idle (laptop, arm64, `scripts/check-memory.sh`)
 | Container | Used | Limit |
@@ -45,7 +45,7 @@ Where versions live (one place per ecosystem): Java in `services/pom.xml`; Pytho
 | shankha | 66 MiB | 256 MiB |
 | **Total** | **864 MiB** | 2,496 MiB |
 
-JVM flags (`java.Dockerfile`): `MaxRAMPercentage=60`, `MaxMetaspaceSize=96m`, `ReservedCodeCacheSize=48m`, `Xss512k`, SerialGC, C1 only. Idle is not load: re-measure on the VPS (amd64) with real traffic before going live. LifeOS shares the VPS (0019), so the real free RAM is less than 0014 assumed.
+JVM flags (`java.Dockerfile`): `MaxRAMPercentage=50` (heap 192 MB of 384), `MaxDirectMemorySize=32m`, `MaxMetaspaceSize=96m`, `ReservedCodeCacheSize=48m`, `Xss512k`, SerialGC, C1 only (revisit C2 for Phase 2 hot paths). Heap + metaspace + code cache + direct memory + stacks stay below the limit, so a heap OOM is a Java error instead of a kernel kill (exit 137). Idle is not load: re-measure on the VPS (amd64) with real traffic before going live. LifeOS shares the VPS (0019), so the real free RAM is less than 0014 assumed.
 
 ## Laptop setup
 `JAVA_HOME=/opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home` (keg-only formula; the Temurin cask needs sudo).

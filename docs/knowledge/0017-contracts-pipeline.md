@@ -23,9 +23,10 @@ Supersedes the `contracts/proto/{events,api}/` split in 0012.
 | Python | `contracts/python` package `vajra-contracts`, hatch build hook runs `grpcio-tools` when uv installs it | `from vajra.common.v1.event_envelope_pb2 import EventEnvelope` |
 
 - Python top-level package is `vajra` (not `vajra_contracts.vajra`), because protoc-generated cross-imports are written as `from vajra.<pkg> import ...`.
+- `contracts/python/pyproject.toml` sets uv `cache-keys` on `../proto/**/*.proto` and `hatch_build.py`, so `uv sync` re-runs protoc after any proto edit (without it uv kept stale classes).
 - Runtime versions must stay on the same protobuf line: Java `protobuf-java 4.36.x` ↔ Python `protobuf 7.36.x`.
 - The protoc binary fetched by the Maven plugin needs glibc, so Java images build on a Debian/Ubuntu Maven image (runtime image can stay Alpine).
 
 ## Checks
 - `buf lint` (STANDARD rules) on every push.
-- `buf breaking` (FILE rules) against `main` on every pull request: a change that breaks wire compatibility fails CI.
+- `scripts/check-proto-breaking.sh <base>` runs `buf breaking` (FILE rules): against `main` on pull requests and against the previous commit on pushes to `main`, so direct pushes are checked too. Skipped only when the base has no contracts yet.

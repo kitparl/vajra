@@ -9,6 +9,8 @@ status: current
 # Database roles, schemas and migrations
 
 ## Roles and schemas
+The Postgres healthcheck uses TCP (`pg_isready -h 127.0.0.1`), because during first-time init the temporary server already answers on the unix socket before roles exist.
+
 `infra/postgres/init/01-roles-and-schemas.sh` runs on the first start of an empty Postgres volume (and is safe to re-run). For each service it creates:
 
 | Schema | Login role | Service |
@@ -39,7 +41,7 @@ Guard: `infra/postgres/test/role-isolation.sh` (also in CI) proves every role ca
 ## Fail fast on missing config
 Every service needs `DB_URL`, `DB_USER`, `DB_PASSWORD`. A missing one stops startup with a message naming it:
 - Java: `services/common` (`RequiredEnvironment`). Needed because Spring keeps an unresolved `${DB_PASSWORD}` as literal text and fails later with an unrelated "connection refused".
-- Python: `vajra_common.settings.DatabaseSettings` (pydantic-settings, all fields required).
+- Python: `vajra_common.settings.DatabaseSettings` (pydantic-settings, all fields required and non-empty; compose passes `""` for an unset variable).
 
 ## Health
 `/actuator/health` (Java) and `/health` (Python) return 200 `UP` only when the database answers, otherwise 503 `DOWN`. Connection timeout is 3 s so the check never hangs.

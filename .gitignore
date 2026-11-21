@@ -1,0 +1,45 @@
+
+# Local requirements notes (not for version control)
+requirements/
+
+# Local-only agent settings
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Dependencies & build
+node_modules/
+frontend/node_modules/
+frontend/dist/
+/.venv/
+backend/.venv/
+backend/*.db
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+.lifeos_schema.lock
+backend/.lifeos_schema.lock
+backend/.env
+backend/static/
+frontend/.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+
+# Local DB recovery dumps and logs (personal data; never commit)
+backend/db-recovery/
+
+# Local file storage
+backend/uploads/
+uploads/
+bulbul/
+setup/
+
+.cursorrules
+.secret_notes
+/requirements.txt
+# Superpowers specs/plans (local only)
+docs/superpowers/

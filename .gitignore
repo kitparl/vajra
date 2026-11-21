@@ -1,45 +1,51 @@
-
-# Local requirements notes (not for version control)
+# --- Local-only notes and agent settings (never commit) ---
 requirements/
-
-# Local-only agent settings
+/requirements.txt
+.secret_notes
 .claude/settings.local.json
 CLAUDE.local.md
+.cursorrules
+# Superpowers specs/plans (local only)
+docs/superpowers/
 
-# Dependencies & build
+# --- Secrets (use env vars / secret manager; commit only *.example) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- OS / editors ---
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# --- Java (Spring Boot services) ---
+target/
+build/
+.gradle/
+*.class
+
+# --- Python (FastAPI services) ---
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- UI (Angular) ---
 node_modules/
-frontend/node_modules/
-frontend/dist/
-/.venv/
-backend/.venv/
-backend/*.db
+ui/dist/
+ui/.angular/
+
+# --- Logs and local data ---
+*.log
 *.db
 *.db-shm
 *.db-wal
 *.db-journal
-.lifeos_schema.lock
-backend/.lifeos_schema.lock
-backend/.env
-backend/static/
-frontend/.env
-
-# Python
-__pycache__/
-*.pyc
-.pytest_cache/
-
-
-# Local DB recovery dumps and logs (personal data; never commit)
-backend/db-recovery/
-
-# Local file storage
-backend/uploads/
-uploads/
-bulbul/
-setup/
-
-.cursorrules
-.secret_notes
-/requirements.txt
-# Superpowers specs/plans (local only)
-docs/superpowers/

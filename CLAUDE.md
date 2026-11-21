@@ -5,9 +5,9 @@ Self-learning, multi-exchange autonomous trading platform. Crypto first (Delta E
 Owner: Pranshu. Read `docs/knowledge/0001-project-overview.md` and `0003-architecture-and-data-ownership.md` before any large change.
 
 ## Stack (details and versions: `docs/knowledge/0002-tech-stack-and-versions.md`)
-- Spring Boot (Java 25 LTS): `core-service`, `risk-service`
-- FastAPI (Python): `research-service`, `signal-service`
-- Spring Boot (Java 25 LTS): `gateway-bff` (dashboard API, WebSocket gateway, notifier, scheduler)
+- Spring Boot (Java 25 LTS): `core-service` (`services/brahma/`), `risk-service` (`services/maryada/`)
+- FastAPI (Python): `research-service` (`services/manthan/`), `signal-service` (`services/shankha/`)
+- Spring Boot (Java 25 LTS): `gateway-bff` (`services/dvara/`; dashboard API, WebSocket gateway, notifier, scheduler)
 - Angular: `ui` (frontend only; Node is used just for Angular build tooling)
 - **Backend services use only Python and Java. No NestJS, no Node/TypeScript backend** (see `0011`).
 - PostgreSQL 18, Kafka, Redis. Contracts (Protobuf) live in `contracts/` only.
@@ -45,6 +45,19 @@ When a development task is finished (code done, tests pass), BEFORE ending your 
 Besides the numbered files, `docs/knowledge/` has **topic folders** (for example `trading-basics/`, `risk-management/`) with beginner-friendly notes in **Hinglish**, explained with small real-life examples.
 - When you add a new concept or feature, also add or extend the note in the matching topic folder (create a new topic folder if none fits). Files in topic folders are named by topic (`NN-slug.md`), not by the global number.
 - Style: very simple language, small example first, then project usage. Keep the folder's `README.md` and `docs/knowledge/README.md` topic table updated.
+
+## Superpowers workflow
+Use the superpowers skills for every task in this repo:
+- New feature / behavior change: `superpowers:brainstorming` first, then `superpowers:writing-plans`, then `superpowers:executing-plans` or `superpowers:subagent-driven-development`.
+- Implementation: `superpowers:test-driven-development` (always for order state machine, risk checks, idempotency).
+- Bugs / failing tests: `superpowers:systematic-debugging` before proposing a fix.
+- Before saying "done": `superpowers:verification-before-completion`, and `superpowers:requesting-code-review` for larger changes.
+- Specs and plans go in `docs/superpowers/` (git-ignored, local only).
+
+**This file wins over the skills where they conflict:**
+- Never `git commit` or `git push` (rule 9), even if a skill says to commit after each step. Skip those steps.
+- In `superpowers:finishing-a-development-branch`, do not merge, push or open a PR; ask the release-doc question above instead.
+- Do not create git worktrees unless the user asks.
 
 ## Working style
 - Reply to the user in Hinglish unless they switch language.

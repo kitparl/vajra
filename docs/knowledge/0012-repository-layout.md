@@ -8,13 +8,15 @@ status: current
 
 # Repository layout (monorepo)
 
+Folder names under `services/` corrected per 0013 (Sanskrit folder names).
+
 ## Decision
 One monorepo. Each deployable lives in its own folder and owns its own build files, migrations and tests.
 
 ```
 contracts/proto/{events,api}/   Protobuf: Kafka events and service APIs
-services/<name>/                core-service, risk-service, gateway-bff (Spring Boot)
-                                research-service, signal-service (FastAPI)
+services/<name>/                brahma (core), maryada (risk), dvara (gateway-bff)  - Spring Boot
+                                manthan (research), shankha (signal)                - FastAPI
 ui/                             Angular terminal
 infra/{compose,postgres}/       docker-compose; Postgres bootstrap (one schema + role per service)
 scripts/                        dev helpers

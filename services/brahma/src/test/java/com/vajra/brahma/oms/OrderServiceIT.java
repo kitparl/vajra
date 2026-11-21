@@ -14,6 +14,8 @@ import com.vajra.brahma.instrument.InstrumentRepository;
 import com.vajra.brahma.marketdata.QuoteCache;
 import com.vajra.brahma.position.Position;
 import com.vajra.brahma.position.PositionRepository;
+import com.vajra.brahma.risk.TradingStateRepository;
+import com.vajra.brahma.testsupport.ApprovingRiskGate;
 import com.vajra.brahma.testsupport.TestDatabase;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -33,6 +35,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -45,7 +51,17 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Testcontainers
 @SpringBootTest(properties = "vajra.scheduling.enabled=false")
+@Import(OrderServiceIT.RiskOverride.class)
 class OrderServiceIT {
+
+    @TestConfiguration
+    static class RiskOverride {
+        @Bean
+        @Primary
+        ApprovingRiskGate approvingRiskGate() {
+            return new ApprovingRiskGate();
+        }
+    }
 
     @Container
     static final PostgreSQLContainer POSTGRES = TestDatabase.create();
@@ -53,6 +69,8 @@ class OrderServiceIT {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("RISK_API_TOKEN", () -> "test-risk-token");
+        registry.add("CORE_INTERNAL_TOKEN", () -> "test-internal-token");
     }
 
     @Autowired
@@ -76,6 +94,12 @@ class OrderServiceIT {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    ApprovingRiskGate riskGate;
+
+    @Autowired
+    TradingStateRepository tradingState;
+
     long btcId;
 
     @BeforeEach
@@ -84,6 +108,8 @@ class OrderServiceIT {
             jdbc.sql("delete from " + table).update();
         }
         Instant now = clock.instant();
+        tradingState.setHalted(false, null, now);
+        riskGate.reset();
         instruments.upsertAll(List.of(
                 instrument("BTCUSD", true, now),
                 instrument("XRPUSD", false, now)));
@@ -115,6 +141,55 @@ class OrderServiceIT {
         assertThat(auditCount("order.updated")).isEqualTo(5);
         assertThat(auditCount("fill.created")).isEqualTo(1);
         assertThat(auditCount("position.updated")).isEqualTo(1);
+    }
+
+    @Test
+    void riskDecisionIdIsStored() {
+        Order order = orderService.place(market("rid-1", Side.BUY, 1)).order();
+
+        assertThat(orderService.details(order.id()).orElseThrow().riskDecisionId())
+                .isEqualTo(ApprovingRiskGate.DECISION_ID);
+        assertThat(riskGate.calls()).isEqualTo(1);
+    }
+
+    @Test
+    void localHaltRejectsWithoutCallingRisk() {
+        tradingState.setHalted(true, "kill switch", clock.instant());
+
+        Order order = orderService.place(market("halt-1", Side.BUY, 1)).order();
+
+        assertThat(order.state()).isEqualTo(OrderState.RISK_REJECTED);
+        assertThat(order.reason()).isEqualTo("HALTED");
+        assertThat(states(order.id())).containsExactly(OrderState.NEW, OrderState.RISK_REJECTED);
+        assertThat(orderService.details(order.id()).orElseThrow().riskDecisionId()).isNull();
+        assertThat(riskGate.calls()).isZero();
+        assertThat(fills(order.id())).isEmpty();
+    }
+
+    @Test
+    void localHaltRejectsReduceOnlyManualOrder() {
+        orderService.place(market("halt-open", Side.BUY, 2));
+        tradingState.setHalted(true, "kill switch", clock.instant());
+
+        Order order = orderService.place(new OrderIntent("halt-ro", "BTCUSD", Side.SELL, OrderType.MARKET, 1, null,
+                null, true, OrderSource.MANUAL)).order();
+
+        assertThat(order.state()).isEqualTo(OrderState.RISK_REJECTED);
+        assertThat(order.reason()).isEqualTo("HALTED");
+    }
+
+    @Test
+    void killSwitchFlattenPassesLocalHalt() {
+        orderService.place(market("flat-open", Side.BUY, 2));
+        tradingState.setHalted(true, "kill switch", clock.instant());
+
+        Order order = orderService.place(new OrderIntent("flat-1", "BTCUSD", Side.SELL, OrderType.MARKET, 2, null,
+                null, true, OrderSource.KILL_SWITCH)).order();
+
+        assertThat(order.state()).isEqualTo(OrderState.FILLED);
+        assertThat(order.source()).isEqualTo(OrderSource.KILL_SWITCH);
+        assertThat(riskGate.calls()).isEqualTo(2);
+        assertThat(positions.find(Venue.PAPER, btcId).orElseThrow().size()).isZero();
     }
 
     @Test
@@ -232,6 +307,26 @@ class OrderServiceIT {
     }
 
     @Test
+    void restingReduceOnlyDoesNotFlipOnFill() {
+        orderService.place(market("rof-open", Side.BUY, 1));
+        Order resting = orderService.place(new OrderIntent("rof-rest", "BTCUSD", Side.SELL, OrderType.LIMIT, 1,
+                new BigDecimal("51000"), TimeInForce.GTC, true, OrderSource.MANUAL)).order();
+        assertThat(resting.state()).isEqualTo(OrderState.ACKED);
+        orderService.place(market("rof-close", Side.SELL, 1));
+        assertThat(positions.find(Venue.PAPER, btcId).orElseThrow().size()).isZero();
+
+        quote("51100", "51110", clock.instant());
+        matcher.run();
+
+        Order after = orderService.details(resting.id()).orElseThrow().order();
+        assertThat(after.state()).isEqualTo(OrderState.CANCELLED);
+        assertThat(after.reason()).isEqualTo("REDUCE_ONLY_WOULD_INCREASE");
+        assertThat(states(resting.id())).endsWith(OrderState.ACKED, OrderState.CANCEL_REQUESTED, OrderState.CANCELLED);
+        assertThat(fills(resting.id())).isEmpty();
+        assertThat(positions.find(Venue.PAPER, btcId).orElseThrow().size()).isZero();
+    }
+
+    @Test
     void restingLimitFillsWhenMatcherRuns() {
         Order resting = orderService.place(limit("rest-1", Side.BUY, 1, "49900", TimeInForce.GTC)).order();
         assertThat(resting.state()).isEqualTo(OrderState.ACKED);
@@ -323,13 +418,14 @@ class OrderServiceIT {
         OrderService deltaOrderService;
 
         @Test
-        void deltaTestnetModeIsRiskRejected() {
+        void deltaTestnetModeHasNoTradingVenue() {
             Order order = deltaOrderService.place(market("delta-1", Side.BUY, 1)).order();
 
             assertThat(order.venue()).isEqualTo(Venue.DELTA_TESTNET);
-            assertThat(order.state()).isEqualTo(OrderState.RISK_REJECTED);
-            assertThat(order.reason()).isEqualTo("NO_RISK_SERVICE");
-            assertThat(states(order.id())).containsExactly(OrderState.NEW, OrderState.RISK_REJECTED);
+            assertThat(order.state()).isEqualTo(OrderState.REJECTED);
+            assertThat(order.reason()).isEqualTo("NO_TRADING_VENUE");
+            assertThat(states(order.id())).containsExactly(
+                    OrderState.NEW, OrderState.APPROVED, OrderState.SENT, OrderState.REJECTED);
             assertThat(fills(order.id())).isEmpty();
         }
     }

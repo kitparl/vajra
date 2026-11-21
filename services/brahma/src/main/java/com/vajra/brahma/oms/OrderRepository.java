@@ -102,6 +102,21 @@ public class OrderRepository {
                 o.updatedAt(), o.version() + 1);
     }
 
+    /** Records risk-service's decision id; call inside the transaction of the APPROVED/RISK_REJECTED transition. */
+    public void setRiskDecision(UUID orderId, UUID decisionId) {
+        jdbc.sql("update orders set risk_decision_id = :decisionId where id = :id")
+                .param("decisionId", decisionId)
+                .param("id", orderId)
+                .update();
+    }
+
+    public Optional<UUID> riskDecisionId(UUID orderId) {
+        return jdbc.sql("select risk_decision_id from orders where id = :id")
+                .param("id", orderId)
+                .query((rs, row) -> rs.getObject("risk_decision_id", UUID.class))
+                .optional();
+    }
+
     public void addTransition(UUID orderId, OrderTransition t) {
         jdbc.sql("insert into order_transition (order_id, from_state, to_state, reason, at) "
                         + "values (:orderId, :from, :to, :reason, :at)")

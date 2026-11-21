@@ -89,4 +89,15 @@ class PositionMathTest {
         assertThat(PositionMath.unrealizedPnl(s, bd("50500"), CV)).isEqualByComparingTo("-1");
         assertThat(PositionMath.unrealizedPnl(flat(), bd("50500"), CV)).isEqualByComparingTo("0");
     }
+
+    @Test
+    void increasesOrFlips() {
+        assertThat(PositionMath.increasesOrFlips(0, Side.BUY, 1)).isTrue();
+        assertThat(PositionMath.increasesOrFlips(2, Side.BUY, 1)).isTrue();
+        assertThat(PositionMath.increasesOrFlips(2, Side.SELL, 3)).isTrue();
+        assertThat(PositionMath.increasesOrFlips(-2, Side.BUY, 3)).isTrue();
+        assertThat(PositionMath.increasesOrFlips(2, Side.SELL, 2)).isFalse();
+        assertThat(PositionMath.increasesOrFlips(2, Side.SELL, 1)).isFalse();
+        assertThat(PositionMath.increasesOrFlips(-2, Side.BUY, 2)).isFalse();
+    }
 }

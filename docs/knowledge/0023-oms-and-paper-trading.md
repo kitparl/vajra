@@ -38,6 +38,8 @@ Scale note: BigDecimal values leave the API as plain strings with DB scale (e.g.
 Every order state change, fill and position change writes an `audit_event` row **in the same transaction** as the change itself (CLAUDE.md rule 6). Publishing these rows to Kafka is deferred to slice 4 (first consumer).
 
 ## Placeholder risk gate
+Superseded by: 0024 (this paragraph only; `PaperOnlyRiskGate` was replaced by `MaryadaRiskGate` in slice 3).
+
 Until the risk service exists (slice 3), `PaperOnlyRiskGate` approves PAPER orders and rejects everything else with `NO_RISK_SERVICE`. `TRADING_MODE` defaults to `PAPER`; slice 2 has no trading venue for `DELTA_TESTNET`. Live trading stays off.
 
 ## Known follow-ups (slices 3 and 5)

@@ -19,7 +19,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Applies a venue fill: fill row, order update, position update and their audit events in ONE transaction (spec
- * §7.6 step 5). A version conflict (e.g. a market fill and a matcher fill racing on the same position) retries with
+ * §7.6 step 5). A reduce-only order whose fill would now grow or flip the position (it moved since the order was
+ * accepted) is cancelled instead ({@code REDUCE_ONLY_WOULD_INCREASE}). A version conflict (e.g. a market fill and a matcher fill racing on the same position) retries with
  * freshly read order and position, up to {@value #MAX_ATTEMPTS} attempts.
  */
 @Component
@@ -75,6 +76,13 @@ class FillRecorder {
             return order;
         }
         long size = order.size() - order.filledSize();
+        Position current = positions.find(order.venue(), order.instrumentId())
+                .orElseGet(() -> Position.flat(order.venue(), order.instrumentId(), order.symbol()));
+        if (order.reduceOnly() && PositionMath.increasesOrFlips(current.size(), order.side(), size)) {
+            log.warn("Fill {} refused: reduce-only order {} would increase or flip position {}", filled.venueFillId(),
+                    orderId, current.size());
+            return cancelReduceOnly(order);
+        }
         Instant now = clock.instant();
         Fill fill = new Fill(UUID.randomUUID(), order.id(), order.venue(), filled.venueFillId(), filled.price(), size,
                 filled.fee(), filled.liquidity(), now);
@@ -85,12 +93,19 @@ class FillRecorder {
         Order updated = lifecycle.fill(order, OrderState.FILLED, order.size(), averagePrice(order, fill),
                 order.fees().add(fill.fee()));
         audit.record(OmsEvents.FILL_CREATED, OmsEvents.fillCreated(fill, updated));
-        Position current = positions.find(order.venue(), order.instrumentId())
-                .orElseGet(() -> Position.flat(order.venue(), order.instrumentId(), order.symbol()));
         Position saved = positions.save(PositionMath.applyFill(current, order.side(), size, fill.price(),
                 instrument.contractValue(), fill.fee(), now));
         audit.record(OmsEvents.POSITION_UPDATED, OmsEvents.positionUpdated(saved));
         return updated;
+    }
+
+    /** The position moved since the order was accepted: cancel instead of growing or flipping it. */
+    private Order cancelReduceOnly(Order order) {
+        String reason = OrderService.REDUCE_ONLY_WOULD_INCREASE;
+        Order requested = order.state() == OrderState.CANCEL_REQUESTED
+                ? order
+                : lifecycle.transition(order, OrderState.CANCEL_REQUESTED, reason);
+        return lifecycle.transition(requested, OrderState.CANCELLED, reason);
     }
 
     private static boolean isFillable(OrderState state) {

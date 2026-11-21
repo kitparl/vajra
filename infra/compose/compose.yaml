@@ -83,6 +83,9 @@ services:
       DB_USER: core_svc
       DB_PASSWORD: ${CORE_DB_PASSWORD}
       PORT: 8081
+      RISK_BASE_URL: http://maryada:8082
+      RISK_API_TOKEN: ${RISK_API_TOKEN}
+      CORE_INTERNAL_TOKEN: ${CORE_INTERNAL_TOKEN}
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 384m
     restart: unless-stopped
@@ -95,6 +98,9 @@ services:
       DB_USER: risk_svc
       DB_PASSWORD: ${RISK_DB_PASSWORD}
       PORT: 8082
+      RISK_API_TOKEN: ${RISK_API_TOKEN}
+      CORE_INTERNAL_TOKEN: ${CORE_INTERNAL_TOKEN}
+      CORE_BASE_URL: http://brahma:8081
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 384m
     restart: unless-stopped

@@ -51,6 +51,13 @@ public final class PositionMath {
                 p.version());
     }
 
+    /** True when a fill of {@code size} on {@code side} would grow the position or flip its side (reduce-only rule). */
+    public static boolean increasesOrFlips(long currentSize, Side side, long size) {
+        long next = currentSize + side.sign() * size;
+        boolean flips = next != 0 && Long.signum(next) != Long.signum(currentSize);
+        return Math.abs(next) > Math.abs(currentSize) || flips;
+    }
+
     /** Fee = size * contractValue * price * rate. */
     public static BigDecimal fee(long size, BigDecimal price, BigDecimal contractValue, BigDecimal rate) {
         return BigDecimal.valueOf(size).multiply(contractValue).multiply(price).multiply(rate);

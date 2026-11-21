@@ -3,9 +3,6 @@ package com.vajra.maryada;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
@@ -30,6 +27,8 @@ class MaryadaApplicationIT {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("RISK_API_TOKEN", () -> "test-risk-token");
+        registry.add("CORE_INTERNAL_TOKEN", () -> "core-token");
     }
 
     @Value("${local.server.port}")
@@ -58,19 +57,8 @@ class MaryadaApplicationIT {
     @Test
     void contextFailsWithoutDbPassword() {
         SpringApplicationBuilder app = new SpringApplicationBuilder(MaryadaApplication.class)
-                .properties("DB_URL=jdbc:postgresql://localhost:1/vajra", "DB_USER=risk_svc", "server.port=0");
+                .properties("DB_URL=jdbc:postgresql://localhost:1/vajra", "DB_USER=risk_svc", "RISK_API_TOKEN=t", "server.port=0");
 
         assertThatThrownBy(app::run).hasStackTraceContaining("DB_PASSWORD");
-    }
-}
-
-final class HttpTestClient {
-    private static final HttpClient CLIENT = HttpClient.newHttpClient();
-
-    private HttpTestClient() {}
-
-    static HttpResponse<String> get(int port, String path) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).build();
-        return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
     }
 }

@@ -29,5 +29,12 @@ vajra:
     # Symbols that get quotes, candles and (later) trading. Others are stored in the instrument master only.
     symbols: BTCUSD,ETHUSD
   trading:
-    # PAPER (default) or DELTA_TESTNET. Slice 2 has no testnet trading venue: non-paper orders are risk-rejected.
+    # PAPER (default) or DELTA_TESTNET. There is no testnet trading venue yet: non-paper orders are rejected.
     mode: ${TRADING_MODE:PAPER}
+  risk:
+    # Every order is approved by risk-service (maryada). Startup fails if the token is blank.
+    base-url: ${RISK_BASE_URL:http://localhost:8082}
+    api-token: ${RISK_API_TOKEN:}
+  internal:
+    # risk-service (maryada) sends this on /internal/** (kill switch). Startup fails if it is blank.
+    token: ${CORE_INTERNAL_TOKEN:}

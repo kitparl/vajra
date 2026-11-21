@@ -4,6 +4,7 @@ import com.vajra.brahma.audit.AuditWriter;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,6 +33,15 @@ class OrderLifecycle {
 
     Order transition(Order o, OrderState to, String reason) {
         return move(o, to, reason, o.venueOrderId(), o.filledSize(), o.avgFillPrice(), o.fees());
+    }
+
+    /** APPROVED or RISK_REJECTED with risk-service's decision id (null when there was no decision). */
+    Order riskDecided(Order o, OrderState to, String reason, UUID decisionId) {
+        Order saved = transition(o, to, reason);
+        if (decisionId != null) {
+            orders.setRiskDecision(o.id(), decisionId);
+        }
+        return saved;
     }
 
     /** A venue answer that carries the venue's order id. */

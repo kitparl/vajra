@@ -7,9 +7,11 @@ import com.vajra.brahma.connector.VenueResult;
 import com.vajra.brahma.instrument.Instrument;
 import com.vajra.brahma.instrument.InstrumentRepository;
 import com.vajra.brahma.position.Position;
+import com.vajra.brahma.position.PositionMath;
 import com.vajra.brahma.position.PositionRepository;
 import com.vajra.brahma.risk.RiskDecision;
 import com.vajra.brahma.risk.RiskGate;
+import com.vajra.brahma.risk.TradingStateRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -37,7 +39,7 @@ public class OrderService {
     static final Venue INSTRUMENT_VENUE = Venue.DELTA_TESTNET;
     static final String REDUCE_ONLY_WOULD_INCREASE = "REDUCE_ONLY_WOULD_INCREASE";
     static final String NO_TRADING_VENUE = "NO_TRADING_VENUE";
-    static final String RISK_CHECK_FAILED = "RISK_CHECK_FAILED";
+    static final String HALTED = "HALTED";
     static final String VENUE_ERROR = "VENUE_ERROR";
     static final String FILL_NOT_RECORDED = "FILL_NOT_RECORDED";
     private static final int LIST_LIMIT = 100;
@@ -48,6 +50,7 @@ public class OrderService {
     private final PositionRepository positions;
     private final InstrumentRepository instruments;
     private final RiskGate riskGate;
+    private final TradingStateRepository tradingState;
     private final List<TradingVenue> venues;
     private final OrderLifecycle lifecycle;
     private final FillRecorder fillRecorder;
@@ -55,14 +58,16 @@ public class OrderService {
     private final Clock clock;
 
     OrderService(TransactionTemplate tx, OrderRepository orders, FillRepository fills, PositionRepository positions,
-            InstrumentRepository instruments, RiskGate riskGate, List<TradingVenue> venues, OrderLifecycle lifecycle,
-            FillRecorder fillRecorder, TradingProperties trading, Clock clock) {
+            InstrumentRepository instruments, RiskGate riskGate, TradingStateRepository tradingState,
+            List<TradingVenue> venues, OrderLifecycle lifecycle, FillRecorder fillRecorder, TradingProperties trading,
+            Clock clock) {
         this.tx = tx;
         this.orders = orders;
         this.fills = fills;
         this.positions = positions;
         this.instruments = instruments;
         this.riskGate = riskGate;
+        this.tradingState = tradingState;
         this.venues = List.copyOf(venues);
         this.lifecycle = lifecycle;
         this.fillRecorder = fillRecorder;
@@ -131,7 +136,8 @@ public class OrderService {
 
     public Optional<OrderDetails> details(UUID orderId) {
         return orders.find(orderId)
-                .map(o -> new OrderDetails(o, orders.transitions(orderId), fills.findByOrder(orderId)));
+                .map(o -> new OrderDetails(o, orders.riskDecisionId(orderId).orElse(null), orders.transitions(orderId),
+                        fills.findByOrder(orderId)));
     }
 
     /** Newest first, at most 100. */
@@ -154,9 +160,10 @@ public class OrderService {
     private Order process(Order order, Instrument instrument) {
         RiskDecision decision = riskCheck(order);
         if (!decision.approved()) {
-            return inTx(() -> lifecycle.transition(order, OrderState.RISK_REJECTED, decision.reason()));
+            return inTx(() -> lifecycle.riskDecided(
+                    order, OrderState.RISK_REJECTED, decision.reason(), decision.decisionId()));
         }
-        Order approved = inTx(() -> lifecycle.transition(order, OrderState.APPROVED, null));
+        Order approved = inTx(() -> lifecycle.riskDecided(order, OrderState.APPROVED, null, decision.decisionId()));
         if (approved.reduceOnly() && wouldIncrease(approved)) {
             return rejectWithoutSending(approved, REDUCE_ONLY_WOULD_INCREASE);
         }
@@ -212,23 +219,31 @@ public class OrderService {
                 lifecycle.transition(approved, OrderState.SENT, null), OrderState.REJECTED, reason));
     }
 
-    /** Fail-closed: an error in the risk check rejects the order. */
+    /**
+     * Fail-closed: an error in the risk check rejects the order. While halted locally, only kill-switch reduce-only
+     * flattens reach risk-service, so a halt holds even when risk-service is down.
+     */
     private RiskDecision riskCheck(Order order) {
         try {
+            if (tradingState.halted() && !isKillSwitchFlatten(order)) {
+                return RiskDecision.reject(HALTED);
+            }
             RiskDecision decision = riskGate.approve(order);
-            return decision == null ? RiskDecision.reject(RISK_CHECK_FAILED) : decision;
+            return decision == null ? RiskDecision.reject(RiskDecision.RISK_CHECK_FAILED) : decision;
         } catch (RuntimeException e) {
             log.error("Risk check for order {} failed; rejecting", order.id(), e);
-            return RiskDecision.reject(RISK_CHECK_FAILED);
+            return RiskDecision.reject(RiskDecision.RISK_CHECK_FAILED);
         }
+    }
+
+    private static boolean isKillSwitchFlatten(Order order) {
+        return order.source() == OrderSource.KILL_SWITCH && order.reduceOnly();
     }
 
     /** True when filling the order would grow the position or flip its side. */
     private boolean wouldIncrease(Order order) {
         long current = positions.find(order.venue(), order.instrumentId()).map(Position::size).orElse(0L);
-        long next = current + order.side().sign() * order.size();
-        boolean flips = next != 0 && Long.signum(next) != Long.signum(current);
-        return Math.abs(next) > Math.abs(current) || flips;
+        return PositionMath.increasesOrFlips(current, order.side(), order.size());
     }
 
     /**

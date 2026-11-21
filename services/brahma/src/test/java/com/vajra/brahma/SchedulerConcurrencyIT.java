@@ -42,6 +42,8 @@ class SchedulerConcurrencyIT {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("RISK_API_TOKEN", () -> "test-risk-token");
+        registry.add("CORE_INTERNAL_TOKEN", () -> "test-internal-token");
     }
 
     @AfterAll

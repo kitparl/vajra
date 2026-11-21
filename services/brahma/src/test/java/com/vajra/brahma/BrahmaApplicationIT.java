@@ -29,6 +29,8 @@ class BrahmaApplicationIT {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("RISK_API_TOKEN", () -> "test-risk-token");
+        registry.add("CORE_INTERNAL_TOKEN", () -> "test-internal-token");
     }
 
     @Value("${local.server.port}")
@@ -60,5 +62,15 @@ class BrahmaApplicationIT {
                 .properties("DB_URL=jdbc:postgresql://localhost:1/vajra", "DB_USER=core_svc", "server.port=0");
 
         assertThatThrownBy(app::run).hasStackTraceContaining("DB_PASSWORD");
+    }
+
+    @Test
+    void contextFailsWithBlankRiskApiToken() {
+        SpringApplicationBuilder app = new SpringApplicationBuilder(BrahmaApplication.class)
+                .properties("DB_URL=jdbc:postgresql://localhost:1/vajra", "DB_USER=core_svc", "DB_PASSWORD=x",
+                        "spring.flyway.enabled=false", "vajra.scheduling.enabled=false", "RISK_API_TOKEN= ",
+                        "CORE_INTERNAL_TOKEN=x", "server.port=0");
+
+        assertThatThrownBy(app::run).hasStackTraceContaining("vajra.risk").hasStackTraceContaining("apiToken");
     }
 }

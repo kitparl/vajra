@@ -8,6 +8,7 @@ import com.vajra.brahma.connector.Venue;
 import com.vajra.brahma.instrument.Instrument;
 import com.vajra.brahma.instrument.InstrumentRepository;
 import com.vajra.brahma.marketdata.QuoteCache;
+import com.vajra.brahma.testsupport.ApprovingRiskGate;
 import com.vajra.brahma.testsupport.HttpTestClient;
 import com.vajra.brahma.testsupport.MutableClock;
 import com.vajra.brahma.testsupport.TestDatabase;
@@ -49,12 +50,23 @@ class OrderApiIT {
         }
     }
 
+    @TestConfiguration
+    static class RiskOverride {
+        @Bean
+        @Primary
+        ApprovingRiskGate approvingRiskGate() {
+            return new ApprovingRiskGate();
+        }
+    }
+
     @Container
     static final PostgreSQLContainer POSTGRES = TestDatabase.create();
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("RISK_API_TOKEN", () -> "test-risk-token");
+        registry.add("CORE_INTERNAL_TOKEN", () -> "test-internal-token");
     }
 
     @Autowired

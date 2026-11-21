@@ -15,7 +15,7 @@ class EventEnvelopeTest {
         EventEnvelope original = EventEnvelope.newBuilder()
                 .setEventId("e-1")
                 .setEventType("test.ping")
-                .setProducer("brahma")
+                .setProducer("core-service")
                 .setOccurredAt(Timestamp.newBuilder().setSeconds(1_700_000_000L))
                 .setPayload(Any.pack(StringValue.of("hi")))
                 .build();

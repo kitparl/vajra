@@ -16,8 +16,8 @@ Docker ki `mem_limit` wahi shelf hai.
 | postgres | 53 MiB | 512 MiB |
 | kafka | 329 MiB | 512 MiB |
 | redis | 12 MiB | 64 MiB |
-| brahma / maryada / dvara | ~135 MiB each | 384 MiB each |
-| shankha | 66 MiB | 256 MiB |
+| core-service / risk-service / gateway-bff | ~135 MiB each | 384 MiB each |
+| signal-service | 66 MiB | 256 MiB |
 | **Kul** | **864 MiB** | |
 
 `scripts/check-memory.sh` ye table banata hai aur fail ho jaata hai agar koi container apni shelf ka 90% cross kare.
@@ -28,9 +28,11 @@ Dhyan do: ye **khaali baithe** ka naap hai. Asli trading ke time zyada lagega, a
 cp infra/compose/.env.example infra/compose/.env   # passwords badlo
 scripts/compose.sh up -d --build                   # sab chalu
 scripts/check-memory.sh                            # memory check
-scripts/compose.sh --profile research up -d manthan  # research sirf laptop par
+scripts/compose.sh --profile research up -d research-service  # research sirf laptop par
 scripts/compose.sh down                            # band
 ```
+
+Compose me services ke naam role wale hain (`core-service`, `risk-service`, …), folder ke Sanskrit naam nahi (0025).
 
 ## Do compose files kyun?
 - `compose.yaml`: base, jo baad me VPS par chalega. Database ke ports bahar nahi khulte (suraksha).

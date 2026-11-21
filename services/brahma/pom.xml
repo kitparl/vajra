@@ -10,7 +10,7 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>brahma</artifactId>
+    <artifactId>core-service</artifactId>
     <description>core-service: connectors, market data, OMS, positions, audit (schema core)</description>
 
     <dependencies>

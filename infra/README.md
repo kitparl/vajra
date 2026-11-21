@@ -10,8 +10,8 @@ Local and deployment infrastructure. Details: `docs/knowledge/0016-database-role
 
 ```
 cp infra/compose/.env.example infra/compose/.env   # then change every change-me
-scripts/compose.sh up -d --build                   # VPS set (manthan excluded)
-scripts/compose.sh --profile research up -d manthan
+scripts/compose.sh up -d --build                   # VPS set (research-service excluded)
+scripts/compose.sh --profile research up -d research-service
 scripts/check-memory.sh                            # all healthy and under 90% of limits
 infra/postgres/test/role-isolation.sh
 scripts/compose.sh down                            # add -v to wipe data

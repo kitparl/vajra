@@ -1,5 +1,5 @@
 [project]
-name = "shankha"
+name = "signal-service"
 version = "0.1.0"
 description = "signal-service: runs strategies and promoted models, publishes signals (schema signal)."
 requires-python = "==3.14.*"

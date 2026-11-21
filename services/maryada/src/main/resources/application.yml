@@ -1,6 +1,6 @@
 spring:
   application:
-    name: maryada
+    name: risk-service
   threads:
     virtual:
       enabled: true

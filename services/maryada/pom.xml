@@ -10,7 +10,7 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>maryada</artifactId>
+    <artifactId>risk-service</artifactId>
     <description>risk-service: approves or vetoes every order, owns the kill-switch (schema risk)</description>
 
     <dependencies>

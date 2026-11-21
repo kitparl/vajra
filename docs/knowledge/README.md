@@ -35,6 +35,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0022 | Market data by REST polling from Delta testnet (Phase 2 slice 1) | decision |
 | 0023 | Order management and paper trading in brahma (Phase 2 slice 2) | decision |
 | 0024 | Risk gate and kill-switch (maryada + brahma, Phase 2 slice 3) | decision |
+| 0025 | Role names in code, Sanskrit only in folder names | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.

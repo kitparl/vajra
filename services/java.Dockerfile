@@ -1,5 +1,6 @@
 # Shared image for the Spring Boot services. Build from the repo root:
 #   docker build -f services/java.Dockerfile --build-arg SERVICE=brahma .
+# SERVICE is the folder under services/ (Sanskrit); the jar inside is named by its role artifactId (core-service).
 # glibc build image: the protoc binary fetched by protobuf-maven-plugin does not run on Alpine (musl).
 FROM maven:3.10.0-eclipse-temurin-25-noble AS build
 ARG SERVICE
@@ -14,7 +15,7 @@ COPY services/maryada services/maryada
 COPY services/dvara services/dvara
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -q -f services/pom.xml -pl ${SERVICE} -am package -DskipTests \
- && cp services/${SERVICE}/target/${SERVICE}-*.jar /app.jar
+ && cp services/${SERVICE}/target/*.jar /app.jar
 
 FROM eclipse-temurin:25.0.5.1_2-jre-alpine-3.23
 RUN addgroup -S app && adduser -S app -G app

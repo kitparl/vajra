@@ -8,6 +8,7 @@ Owner: Pranshu. Read `docs/knowledge/0001-project-overview.md` and `0003-archite
 - Spring Boot (Java 25 LTS): `core-service` (`services/brahma/`), `risk-service` (`services/maryada/`)
 - FastAPI (Python): `research-service` (`services/manthan/`), `signal-service` (`services/shankha/`)
 - Spring Boot (Java 25 LTS): `gateway-bff` (`services/dvara/`; dashboard API, WebSocket gateway, notifier, scheduler)
+- Sanskrit names are folder names only; code, config and compose use role names (`docs/knowledge/0025-role-names-in-code.md`).
 - Angular: `ui` (frontend only; Node is used just for Angular build tooling)
 - **Backend services use only Python and Java. No NestJS, no Node/TypeScript backend** (see `0011`).
 - PostgreSQL 18, Kafka, Redis. Contracts (Protobuf) live in `contracts/` only.

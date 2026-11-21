@@ -1,0 +1,44 @@
+package com.vajra.coreservice;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.vajra.coreservice.testsupport.HttpTestClient;
+import com.vajra.coreservice.testsupport.TestDatabase;
+import java.net.http.HttpResponse;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+/** Own container, because this test stops it. */
+@Testcontainers
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "vajra.scheduling.enabled=false")
+class CoreServiceDatabaseDownIT {
+
+    @Container
+    static final PostgreSQLContainer POSTGRES = TestDatabase.create();
+
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("RISK_API_TOKEN", () -> "test-risk-token");
+        registry.add("CORE_INTERNAL_TOKEN", () -> "test-internal-token");
+    }
+
+    @Value("${local.server.port}")
+    int port;
+
+    @Test
+    void healthIsDownWhenDatabaseStops() throws Exception {
+        POSTGRES.stop();
+
+        HttpResponse<String> response = HttpTestClient.get(port, "/actuator/health");
+
+        assertThat(response.statusCode()).isEqualTo(503);
+        assertThat(response.body()).contains("\"status\":\"DOWN\"");
+    }
+}

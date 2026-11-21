@@ -1,6 +1,6 @@
 spring:
   application:
-    name: dvara
+    name: gateway-bff
   threads:
     virtual:
       enabled: true

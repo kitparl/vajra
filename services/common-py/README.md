@@ -1,6 +1,6 @@
 # common-py (vajra_common, Python)
 
-Startup plumbing shared by shankha and manthan. **No business logic here.**
+Startup plumbing shared by signal-service and research-service. **No business logic here.**
 
 - `settings.DatabaseSettings` — `DB_URL`, `DB_USER`, `DB_PASSWORD` from env, all required.
 - `db.create_engine_from` — pool of 5, 3 s connect timeout, pre-ping.

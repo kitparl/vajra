@@ -12,11 +12,11 @@ Hamara Postgres wahi building hai: har service ek flat (schema), aur uska DB rol
 
 | Flat (schema) | Chaabi (role) | Kiska |
 |---|---|---|
-| `core` | `core_svc` | brahma |
-| `risk` | `risk_svc` | maryada |
-| `gateway` | `gateway_svc` | dvara |
-| `research` | `research_svc` | manthan |
-| `signal` | `signal_svc` | shankha |
+| `core` | `core_svc` | core-service (`brahma/`) |
+| `risk` | `risk_svc` | risk-service (`maryada/`) |
+| `gateway` | `gateway_svc` | gateway-bff (`dvara/`) |
+| `research` | `research_svc` | research-service (`manthan/`) |
+| `signal` | `signal_svc` | signal-service (`shankha/`) |
 
 ## Ye bante kaise hain?
 `infra/postgres/init/01-roles-and-schemas.sh` pehli baar Postgres start hone par flats aur chaabiyan bana deta hai. Dobara chalao to bhi kuch nahi tootta.

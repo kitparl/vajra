@@ -10,7 +10,7 @@ def test_round_trips_through_bytes() -> None:
     original = EventEnvelope(
         event_id="e-1",
         event_type="test.ping",
-        producer="brahma",
+        producer="core-service",
         occurred_at=Timestamp(seconds=1_700_000_000),
         payload=payload,
     )

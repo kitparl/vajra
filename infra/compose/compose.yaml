@@ -76,14 +76,14 @@ services:
       timeout: 3s
       retries: 20
 
-  brahma:
+  core-service:
     build: { context: ../.., dockerfile: services/java.Dockerfile, args: { SERVICE: brahma } }
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/vajra
       DB_USER: core_svc
       DB_PASSWORD: ${CORE_DB_PASSWORD}
       PORT: 8081
-      RISK_BASE_URL: http://maryada:8082
+      RISK_BASE_URL: http://risk-service:8082
       RISK_API_TOKEN: ${RISK_API_TOKEN}
       CORE_INTERNAL_TOKEN: ${CORE_INTERNAL_TOKEN}
     depends_on: { postgres: { condition: service_healthy } }
@@ -91,7 +91,7 @@ services:
     restart: unless-stopped
     healthcheck: *java-health
 
-  maryada:
+  risk-service:
     build: { context: ../.., dockerfile: services/java.Dockerfile, args: { SERVICE: maryada } }
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/vajra
@@ -100,13 +100,13 @@ services:
       PORT: 8082
       RISK_API_TOKEN: ${RISK_API_TOKEN}
       CORE_INTERNAL_TOKEN: ${CORE_INTERNAL_TOKEN}
-      CORE_BASE_URL: http://brahma:8081
+      CORE_BASE_URL: http://core-service:8081
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 384m
     restart: unless-stopped
     healthcheck: *java-health
 
-  dvara:
+  gateway-bff:
     build: { context: ../.., dockerfile: services/java.Dockerfile, args: { SERVICE: dvara } }
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/vajra
@@ -118,8 +118,8 @@ services:
     restart: unless-stopped
     healthcheck: *java-health
 
-  shankha:
-    build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: shankha, PORT: 8091 } }
+  signal-service:
+    build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: shankha, PACKAGE: signal-service, MODULE: signal_service, PORT: 8091 } }
     environment:
       DB_URL: postgresql+psycopg://postgres:5432/vajra
       DB_USER: signal_svc
@@ -129,10 +129,10 @@ services:
     restart: unless-stopped
     healthcheck: *python-health
 
-  # research-service runs on the laptop only (0014): scripts/compose.sh --profile research up -d manthan
-  manthan:
+  # research-service runs on the laptop only (0014): scripts/compose.sh --profile research up -d research-service
+  research-service:
     profiles: ["research"]
-    build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: manthan, PORT: 8092 } }
+    build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: manthan, PACKAGE: research-service, MODULE: research_service, PORT: 8092 } }
     environment:
       DB_URL: postgresql+psycopg://postgres:5432/vajra
       DB_USER: research_svc

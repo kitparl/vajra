@@ -32,7 +32,7 @@ Hum har minute nayi candles `core.candle_1m` me save karte hain.
 ## 4. Gap backfill
 **Example:** Aap 3 din chhutti pe the, diary nahi likhi. Wapas aake pichhle 3 din ki entries ek saath bhar di.
 
-`brahma` band tha to un minutes ki candles nahi aayi. Wapas chalu hote hi wo **aakhri save hui candle se** aage ki saari candles Delta se maang leta hai. Isliye koi minute chhoota nahi rehta. Pehli baar chalne pe wo 7 din ka purana data bhar deta hai.
+`core-service` band tha to un minutes ki candles nahi aayi. Wapas chalu hote hi wo **aakhri save hui candle se** aage ki saari candles Delta se maang leta hai. Isliye koi minute chhoota nahi rehta. Pehli baar chalne pe wo 7 din ka purana data bhar deta hai.
 
 ## 5. Project me kahan hai
 - `services/brahma/.../connector/delta/`: Delta se baat karne wala code (sirf **testnet**)

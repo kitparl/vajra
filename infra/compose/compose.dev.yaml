@@ -5,13 +5,13 @@ services:
     ports: ["127.0.0.1:15432:5432"]
   redis:
     ports: ["127.0.0.1:16379:6379"]
-  dvara:
+  gateway-bff:
     ports: ["127.0.0.1:8080:8080"]
-  brahma:
+  core-service:
     ports: ["127.0.0.1:8081:8081"]
-  maryada:
+  risk-service:
     ports: ["127.0.0.1:8082:8082"]
-  shankha:
+  signal-service:
     ports: ["127.0.0.1:8091:8091"]
-  manthan:
+  research-service:
     ports: ["127.0.0.1:8092:8092"]

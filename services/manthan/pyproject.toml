@@ -1,5 +1,5 @@
 [project]
-name = "manthan"
+name = "research-service"
 version = "0.1.0"
 description = "research-service: features, backtests, training, model registry (schema research). Laptop only (0014)."
 requires-python = "==3.14.*"

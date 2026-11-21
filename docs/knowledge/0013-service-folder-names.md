@@ -8,6 +8,8 @@ status: current
 
 # Service folder names (Sanskrit)
 
+Superseded by: 0025 (for names inside code, config and compose; folder names unchanged)
+
 ## Decision
 Service folders under `services/` use short Sanskrit names. The role name (`core-service` etc.) is still used in docs, configs and conversation; both refer to the same deployable.
 

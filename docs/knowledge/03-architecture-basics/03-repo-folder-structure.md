@@ -36,6 +36,8 @@ Har service ka folder ek Sanskrit naam hai jo uska kaam yaad dilata hai. Code au
 
 Example: kal kisi ne bola "risk-service me bug hai" — to folder `services/maryada/` kholo.
 
+**Dhyan do:** Sanskrit naam **sirf folder** ke hain. Code, config, compose aur logs me role naam hi aata hai (`core-service`, `RiskServiceApplication`, `research_service`), taaki log ya error padhte hi samajh aaye ki kaun si service hai. Detail: `../0025-role-names-in-code.md`.
+
 ## Rule yaad rakho
 - **Ek folder = ek service = ek database schema.** Doosre ke folder ka code ya table use nahi karna.
 - Do services ko kuch share karna hai? To `contracts/` me shape likho, aur API ya Kafka event se data bhejo.

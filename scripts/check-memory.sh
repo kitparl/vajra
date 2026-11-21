@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-EXPECTED=(postgres kafka redis brahma maryada dvara shankha)
+EXPECTED=(postgres kafka redis core-service risk-service gateway-bff signal-service)
 THRESHOLD_PERCENT=90
 WAIT_SECONDS=180
 
@@ -25,7 +25,7 @@ done
 
 failures=0
 total_mib=0
-printf '%-10s %10s %10s %6s\n' SERVICE USED_MIB LIMIT_MIB PCT
+printf '%-15s %10s %10s %6s\n' SERVICE USED_MIB LIMIT_MIB PCT
 for svc in "${EXPECTED[@]}"; do
   id="$(container_id "$svc")"
   used="$(docker stats --no-stream --format '{{.MemUsage}}' "$id" | awk '{print $1}')"   # e.g. 123.4MiB
@@ -34,7 +34,7 @@ for svc in "${EXPECTED[@]}"; do
   limit_mib=$((limit_bytes / 1048576))
   pct=$((used_mib * 100 / limit_mib))
   total_mib=$((total_mib + used_mib))
-  printf '%-10s %10s %10s %5s%%\n' "$svc" "$used_mib" "$limit_mib" "$pct"
+  printf '%-15s %10s %10s %5s%%\n' "$svc" "$used_mib" "$limit_mib" "$pct"
   if (( pct >= THRESHOLD_PERCENT )); then echo "FAIL: $svc uses ${pct}% of its limit"; failures=$((failures + 1)); fi
 done
 echo "TOTAL used: ${total_mib} MiB"

@@ -44,4 +44,4 @@ Flip example: long 2 @ 50000, phir 5 becha @ 51000. Pehle 2 band hue (realized 2
 Agar fresh price nahi hai to unrealized `null` dikhta hai, andaza nahi lagate.
 
 ## Vajra me kahan
-`OrderService`, `PaperMatcher`, `PositionMath` in `services/brahma`. Detail: `docs/knowledge/0023-oms-and-paper-trading.md`.
+`OrderService`, `OpenOrderChecker` (was `PaperMatcher`), `PositionMath` in `services/brahma`. Detail: `docs/knowledge/0023-oms-and-paper-trading.md`.

@@ -62,6 +62,10 @@ vajra:
   trading:
     # PAPER (default) or DELTA_TESTNET. There is no testnet trading venue yet: non-paper orders are rejected.
     mode: ${TRADING_MODE:PAPER}
+  delta:
+    # Testnet credentials, env only. Required only when TRADING_MODE=DELTA_TESTNET. Never commit or log them.
+    api-key: ${DELTA_TESTNET_API_KEY:}
+    api-secret: ${DELTA_TESTNET_API_SECRET:}
   risk:
     # Every order is approved by risk-service. Startup fails if the token is blank.
     base-url: ${RISK_BASE_URL:http://localhost:8082}

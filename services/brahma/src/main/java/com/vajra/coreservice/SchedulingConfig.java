@@ -16,8 +16,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @ConditionalOnProperty(name = "vajra.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 class SchedulingConfig {
 
-    /** Quote poller, candle sync, instrument refresh, paper matcher, outbox publisher. */
-    private static final int JOBS = 5;
+    /** Quote poller, candle sync, instrument refresh, open-order checker, reconciler, outbox publisher. */
+    private static final int JOBS = 6;
 
     @Bean
     ThreadPoolTaskScheduler taskScheduler() {

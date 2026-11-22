@@ -1,9 +1,11 @@
 package com.vajra.coreservice.oms;
 
 import com.vajra.coreservice.connector.Venue;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -51,5 +53,26 @@ public class FillRepository {
                         rs.getString("liquidity"),
                         rs.getObject("at", OffsetDateTime.class).toInstant()))
                 .list();
+    }
+
+    /** When we last recorded a fill on {@code venue}. */
+    public Optional<Instant> latestAt(Venue venue) {
+        // max() over no rows is one row holding null, which single() refuses
+        OffsetDateTime latest = jdbc.sql("select max(at) from fill where venue = :venue")
+                .param("venue", venue.name())
+                .query((rs, row) -> rs.getObject(1, OffsetDateTime.class))
+                .list()
+                .get(0);
+        return Optional.ofNullable(latest).map(OffsetDateTime::toInstant);
+    }
+
+    /** True when a stored fill row carries {@code venueFillId}, alone or inside its comma-joined merged id. */
+    public boolean containsVenueFillId(Venue venue, String venueFillId) {
+        return jdbc.sql("select exists (select 1 from fill where venue = :venue "
+                        + "and :id = any (string_to_array(venue_fill_id, ',')))")
+                .param("venue", venue.name())
+                .param("id", venueFillId)
+                .query(Boolean.class)
+                .single();
     }
 }

@@ -1,9 +1,16 @@
 package com.vajra.coreservice.oms;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.vajra.coreservice.connector.Quote;
 import com.vajra.coreservice.connector.Venue;
+import com.vajra.coreservice.connector.VenueResult;
+import com.vajra.coreservice.connector.delta.DeltaPrivateClient;
+import com.vajra.coreservice.connector.delta.DeltaTradingVenue;
 import com.vajra.coreservice.instrument.Instrument;
 import com.vajra.coreservice.instrument.InstrumentRepository;
 import com.vajra.coreservice.marketdata.QuoteCache;
@@ -26,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +44,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -227,6 +237,120 @@ class KillServiceIT {
         assertThat(refused.reason()).isEqualTo("HALTED");
         assertThat(tradingState.halted()).isFalse();
         assertThat(accepted.state()).isEqualTo(OrderState.FILLED);
+    }
+
+    @Test
+    void flattenWorksWhenInstrumentTradingDisabled() {
+        orderService.place(market("dis-1", Side.BUY, 3));
+        instruments.upsertAll(List.of(new Instrument(Venue.DELTA_TESTNET, "BTCUSD", 84, "perpetual_futures",
+                new BigDecimal("0.001"), new BigDecimal("0.1"), BigDecimal.ONE, new BigDecimal("0.0002"),
+                new BigDecimal("0.0005"), false, clock.instant())));
+
+        KillResult result = killService.kill("disabled");
+
+        assertThat(result).isEqualTo(new KillResult(0, 1, true));
+        assertThat(killSwitchOrders()).extracting(Order::state).containsExactly(OrderState.FILLED);
+        assertThat(positionSize()).isZero();
+    }
+
+    @Test
+    void killNotFlattenedWhileOrderUnknownOrSent() {
+        for (OrderState stuck : List.of(OrderState.UNKNOWN, OrderState.SENT)) {
+            Order resting = orderService.place(limit("stuck-" + stuck, Side.BUY, 1, "49000")).order();
+            jdbc.sql("update orders set state = :state where id = :id")
+                    .param("state", stuck.name())
+                    .param("id", resting.id())
+                    .update();
+
+            KillResult result = killService.kill("stuck " + stuck);
+
+            assertThat(result.flattened()).as(stuck.name()).isFalse();
+            jdbc.sql("update orders set state = 'REJECTED' where id = :id").param("id", resting.id()).update();
+        }
+        assertThat(killService.kill("clean").flattened()).isTrue();
+    }
+
+    @Test
+    void positionOnVenueWithoutTradingVenueReportsNotFlattened() {
+        positions.save(new Position(Venue.DELTA_TESTNET, btcId, "BTCUSD", 2, new BigDecimal("50000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, clock.instant(), 0));
+
+        KillResult result = killService.kill("no venue");
+
+        assertThat(result).isEqualTo(new KillResult(0, 0, false));
+        assertThat(killSwitchOrders()).isEmpty();
+    }
+
+    @Nested
+    @TestPropertySource(properties = {
+        "vajra.trading.mode=DELTA_TESTNET", "vajra.delta.api-key=fake-test-key", "vajra.delta.api-secret=fake-test-secret"
+    })
+    class DeltaTestnetMode {
+
+        @MockitoBean
+        DeltaPrivateClient deltaPrivateClient;
+
+        @MockitoBean
+        DeltaTradingVenue deltaVenue;
+
+        @Test
+        void flattenUsesPositionVenueNotTradingMode() {
+            when(deltaVenue.venue()).thenReturn(Venue.DELTA_TESTNET);
+            positions.save(new Position(Venue.PAPER, btcId, "BTCUSD", 3, new BigDecimal("50000"), BigDecimal.ZERO,
+                    BigDecimal.ZERO, clock.instant(), 0));
+
+            KillResult result = killService.kill("paper position in delta mode");
+
+            assertThat(result).isEqualTo(new KillResult(0, 1, true));
+            Order flatten = killSwitchOrders().get(0);
+            assertThat(flatten.venue()).isEqualTo(Venue.PAPER);
+            assertThat(flatten.state()).isEqualTo(OrderState.FILLED);
+            assertThat(positionSize()).isZero();
+            verify(deltaVenue, never()).place(any(), any());
+        }
+
+        @Test
+        void killRecancelsCancelRequestedOrders() {
+            when(deltaVenue.venue()).thenReturn(Venue.DELTA_TESTNET);
+            when(deltaVenue.place(any(), any())).thenAnswer(inv -> new VenueResult.Resting("v-rest"));
+            when(deltaVenue.cancel(any())).thenThrow(new IllegalStateException("Delta 503"));
+            Order resting = orderService.place(limit("rc-rest", Side.BUY, 1, "49000")).order();
+            assertThat(orderService.cancel(resting.id()).state()).isEqualTo(OrderState.CANCEL_REQUESTED);
+            org.mockito.Mockito.doAnswer(inv -> new VenueResult.Cancelled("v-rest")).when(deltaVenue).cancel(any());
+
+            KillResult result = killService.kill("second kill");
+
+            assertThat(result).isEqualTo(new KillResult(1, 0, true));
+            assertThat(orderService.details(resting.id()).orElseThrow().order().state()).isEqualTo(OrderState.CANCELLED);
+        }
+
+        @Test
+        void killDuringRateLimitReportsNotFlattened() {
+            when(deltaVenue.venue()).thenReturn(Venue.DELTA_TESTNET);
+            when(deltaVenue.place(any(), any())).thenAnswer(inv -> {
+                Order order = inv.getArgument(0);
+                if (order.source() == OrderSource.KILL_SWITCH) {
+                    return new VenueResult.Rejected("RATE_LIMITED");
+                }
+                return order.type() == OrderType.MARKET
+                        ? new VenueResult.Filled("v-" + order.idempotencyKey(), "fill-" + order.idempotencyKey(),
+                                new BigDecimal("50010"), new BigDecimal("0.02"), "TAKER")
+                        : new VenueResult.Resting("v-" + order.idempotencyKey());
+            });
+            when(deltaVenue.cancel(any())).thenAnswer(inv -> new VenueResult.Cancelled("v"));
+            Order resting = orderService.place(limit("rl-rest", Side.BUY, 1, "49000")).order();
+            orderService.place(market("rl-open", Side.BUY, 3));
+            assertThat(resting.state()).isEqualTo(OrderState.ACKED);
+
+            KillResult result = killService.kill("rate limited");
+
+            assertThat(result).isEqualTo(new KillResult(1, 1, false));
+            verify(deltaVenue).cancel(any());
+            Order flatten = killSwitchOrders().get(0);
+            assertThat(flatten.state()).isEqualTo(OrderState.REJECTED);
+            assertThat(flatten.reason()).isEqualTo("RATE_LIMITED");
+            assertThat(positions.find(Venue.DELTA_TESTNET, btcId).orElseThrow().size()).isEqualTo(3);
+        }
     }
 
     private List<Order> killSwitchOrders() {

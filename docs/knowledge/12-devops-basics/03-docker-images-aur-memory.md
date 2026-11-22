@@ -14,7 +14,7 @@ Docker ki `mem_limit` wahi shelf hai.
 | Container | Use | Shelf (limit) |
 |---|---|---|
 | postgres | 53 MiB | 512 MiB |
-| kafka | 329 MiB | 512 MiB |
+| kafka | 329 MiB (slice 5: ~430 MiB) | 768 MiB (pehle 512, 2.5.0 me badhaya) |
 | redis | 12 MiB | 64 MiB |
 | core-service / risk-service / gateway-bff | ~135 MiB each | 384 MiB each |
 | signal-service | 66 MiB | 256 MiB |

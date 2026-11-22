@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -164,6 +165,49 @@ public class OrderRepository {
                 .param("venue", venue.name())
                 .query(OrderRepository::map)
                 .list();
+    }
+
+    /** {@link #findOpen} plus CANCEL_REQUESTED: orders the open-order checker must still resolve at the venue. */
+    public List<Order> findCheckable(Venue venue) {
+        return jdbc.sql(SELECT + "where o.venue = :venue and o.state in ('ACKED', 'PARTIALLY_FILLED', 'CANCEL_REQUESTED') "
+                        + "order by o.created_at, o.id")
+                .param("venue", venue.name())
+                .query(OrderRepository::map)
+                .list();
+    }
+
+    /** Every order that is not in a terminal state (NEW to CANCEL_REQUESTED, UNKNOWN included), on any venue. */
+    public List<Order> findNotTerminal() {
+        List<String> states = Arrays.stream(OrderState.values()).filter(s -> !s.isTerminal()).map(Enum::name).toList();
+        return jdbc.sql(SELECT + "where o.state in (:states) order by o.created_at, o.id")
+                .param("states", states)
+                .query(OrderRepository::map)
+                .list();
+    }
+
+    /** Orders in {@code state} whose last change is before {@code cutoff}, oldest first (reconciler). */
+    public List<Order> findByStateBefore(OrderState state, java.time.Instant cutoff) {
+        return jdbc.sql(SELECT + "where o.state = :state and o.updated_at < :cutoff order by o.updated_at, o.id")
+                .param("state", state.name())
+                .param("cutoff", utc(cutoff))
+                .query(OrderRepository::map)
+                .list();
+    }
+
+    /** All orders in {@code state}, oldest change first (reconciler). */
+    public List<Order> findAllByState(OrderState state) {
+        return jdbc.sql(SELECT + "where o.state = :state order by o.updated_at, o.id")
+                .param("state", state.name())
+                .query(OrderRepository::map)
+                .list();
+    }
+
+    public Optional<Order> findByVenueOrderId(Venue venue, String venueOrderId) {
+        return jdbc.sql(SELECT + "where o.venue = :venue and o.venue_order_id = :venueOrderId")
+                .param("venue", venue.name())
+                .param("venueOrderId", venueOrderId)
+                .query(OrderRepository::map)
+                .optional();
     }
 
     private static Order map(ResultSet rs, int row) throws SQLException {

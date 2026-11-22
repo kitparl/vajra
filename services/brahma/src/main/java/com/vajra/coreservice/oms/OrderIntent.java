@@ -1,5 +1,6 @@
 package com.vajra.coreservice.oms;
 
+import com.vajra.coreservice.connector.Venue;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -10,7 +11,8 @@ import java.util.UUID;
 
 /**
  * What the caller asks for. The idempotency key identifies the request; every other field is its body. {@code signalId}
- * is null for manual and kill-switch orders.
+ * is null for manual and kill-switch orders. {@code venue} is set only by kill-switch flattens, which must trade on
+ * the venue where the position sits; null means the venue of the trading mode. It is not part of {@link #requestHash}.
  */
 public record OrderIntent(
         String idempotencyKey,
@@ -22,7 +24,14 @@ public record OrderIntent(
         TimeInForce timeInForce,
         boolean reduceOnly,
         OrderSource source,
-        UUID signalId) {
+        UUID signalId,
+        Venue venue) {
+
+    /** An order on the venue of the trading mode (manual and signal orders). */
+    public OrderIntent(String idempotencyKey, String symbol, Side side, OrderType type, long size,
+            BigDecimal limitPrice, TimeInForce timeInForce, boolean reduceOnly, OrderSource source, UUID signalId) {
+        this(idempotencyKey, symbol, side, type, size, limitPrice, timeInForce, reduceOnly, source, signalId, null);
+    }
 
     /**
      * SHA-256 hex of every field except the key. A replay with the same key must have the same hash. Prices are

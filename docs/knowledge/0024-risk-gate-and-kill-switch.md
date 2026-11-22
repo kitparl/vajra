@@ -60,14 +60,14 @@ brahma 159 MiB of 384 (41%), maryada 149 MiB of 384 (38%).
 
 ## Known follow-ups
 **Before Delta live / slice 5**
-- Kill cannot flatten a position on a disabled instrument (symbol removed from config) or a venue other than `TRADING_MODE`; flatten should skip `tradingEnabled` for KILL_SWITCH reduce-only and use the position's venue.
-- Kill's final "no open order" check misses CANCEL_REQUESTED / UNKNOWN / in-flight orders; reduce-only cancel is local only (fine for paper, not for a real venue).
-- An in-flight MANUAL order that passed the risk check before the halt can fill after kill's last re-read; re-check halt in the SENT transition.
+- Kill cannot flatten a position on a disabled instrument (symbol removed from config) or a venue other than `TRADING_MODE`; flatten should skip `tradingEnabled` for KILL_SWITCH reduce-only and use the position's venue. Superseded by: 0027
+- Kill's final "no open order" check misses CANCEL_REQUESTED / UNKNOWN / in-flight orders; reduce-only cancel is local only (fine for paper, not for a real venue). Superseded by: 0027
+- An in-flight MANUAL order that passed the risk check before the halt can fill after kill's last re-read; re-check halt in the SENT transition. Superseded by: 0027
 - Client timeout (500 ms) vs server work: late APPROVED rows burn the rate window.
 
 **Hardening**
 - `RISK_API_TOKEN` is both brahma's credential for approvals and the only credential for kill/resume, so anyone with brahma's env can resume trading. Add a separate operator token for `/api/v1/kill-switch/**` when dvara is wired in.
-- An in-flight order approved just before the halt can fill after kill's final check, and kill then reports `flattened=true` while a position is open (paper: press kill again). `everythingFlat` should also count NEW/APPROVED/SENT/UNKNOWN orders. Must fix before slice 5.
+- An in-flight order approved just before the halt can fill after kill's final check, and kill then reports `flattened=true` while a position is open (paper: press kill again). `everythingFlat` should also count NEW/APPROVED/SENT/UNKNOWN orders. Must fix before slice 5. Superseded by: 0027
 - Null request/limits NPE paths rely on the service mapping any exception to reject; flatten exemption also skips the position check by design.
 - Kill/resume DB write failing after core resume leaves core resumed and maryada halted with no audit (fails safe). `supersededByResume` reads halted and updated_at in two queries (stale response only).
 - JDK read timeout may not bound a stalled body after headers (unverified, low risk).

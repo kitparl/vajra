@@ -42,6 +42,9 @@ public class OrderService {
     static final String HALTED = "HALTED";
     static final String VENUE_ERROR = "VENUE_ERROR";
     static final String FILL_NOT_RECORDED = "FILL_NOT_RECORDED";
+    static final String STUCK_NOT_SENT = "STUCK_NOT_SENT";
+    static final String STUCK_SENT = "STUCK_SENT";
+    static final String RECONCILED = "RECONCILED";
     private static final int LIST_LIMIT = 100;
 
     private final TransactionTemplate tx;
@@ -93,30 +96,40 @@ public class OrderService {
         return new PlaceOrderResult(process(order, instrument), true);
     }
 
-    /** Cancels a resting order. */
+    /**
+     * Cancels a resting order. A CANCEL_REQUESTED order (an earlier venue cancel failed) gets its venue cancel
+     * re-sent; the kill switch and the open-order checker rely on this.
+     */
     public Order cancel(UUID orderId) {
         Order order = orders.find(orderId).orElseThrow(() -> ApiException.notFound("order not found: " + orderId));
-        if (!order.state().isOpen()) {
+        if (!order.state().isOpen() && order.state() != OrderState.CANCEL_REQUESTED) {
             throw ApiException.conflict("order is " + order.state() + " and cannot be cancelled");
         }
         TradingVenue venue = venueFor(order.venue())
                 .orElseThrow(() -> new IllegalStateException("no trading venue for open order " + orderId));
-        Order requested = inTxOrConflict(() -> lifecycle.transition(order, OrderState.CANCEL_REQUESTED, null));
+        Order requested = order.state() == OrderState.CANCEL_REQUESTED
+                ? order
+                : inTxOrConflict(() -> lifecycle.transition(order, OrderState.CANCEL_REQUESTED, null));
+        return sendCancel(requested, venue);
+    }
+
+    /** Sends the venue cancel; CANCELLED only when the venue confirms, otherwise the order stays CANCEL_REQUESTED. */
+    private Order sendCancel(Order requested, TradingVenue venue) {
         VenueResult result;
         try {
             result = venue.cancel(requested);
         } catch (RuntimeException e) {
-            log.error("Cancel of order {} failed at the venue; left CANCEL_REQUESTED", orderId, e);
+            log.error("Cancel of order {} failed at the venue; left CANCEL_REQUESTED", requested.id(), e);
             return requested;
         }
         if (!(result instanceof VenueResult.Cancelled)) {
-            log.warn("Cancel of order {} answered {}; left CANCEL_REQUESTED", orderId, result);
+            log.warn("Cancel of order {} answered {}; left CANCEL_REQUESTED", requested.id(), result);
             return requested;
         }
         return inTxOrConflict(() -> lifecycle.transition(requested, OrderState.CANCELLED, null));
     }
 
-    /** Asks the venue whether a resting order has filled; used by {@link PaperMatcher}. */
+    /** Asks the venue how a resting order stands and applies the answer; used by {@link OpenOrderChecker}. */
     public void onRestingCheck(Order order) {
         Optional<TradingVenue> venue = venueFor(order.venue());
         if (venue.isEmpty()) {
@@ -125,13 +138,109 @@ public class OrderService {
         }
         Instrument instrument = instruments.find(INSTRUMENT_VENUE, order.symbol())
                 .orElseThrow(() -> new IllegalStateException("instrument " + order.symbol() + " missing"));
-        venue.get().checkResting(order, instrument).ifPresent(result -> {
-            if (result instanceof VenueResult.Filled filled) {
-                fillRecorder.record(order.id(), filled, instrument);
-            } else {
-                log.warn("Resting check for order {} answered {}; ignored", order.id(), result);
+        Optional<VenueResult> result = venue.get().checkResting(order, instrument);
+        if (result.isPresent()) {
+            applyVenueResult(order, result.get(), instrument);
+        } else if (order.state() == OrderState.CANCEL_REQUESTED && order.venue() != Venue.PAPER) {
+            // Nothing final at the venue, so a cancel we asked for may never have arrived: ask again.
+            log.warn("Order {} is CANCEL_REQUESTED but still live at {}; re-sending the cancel", order.id(), order.venue());
+            sendCancel(order, venue.get());
+        }
+    }
+
+    private void applyVenueResult(Order order, VenueResult result, Instrument instrument) {
+        switch (result) {
+            case VenueResult.Filled filled -> fillRecorder.record(order.id(), filled, instrument);
+            case VenueResult.Cancelled cancelled -> inTx(() -> closeAtVenue(order.id(), OrderState.CANCELLED));
+            case VenueResult.Expired expired -> inTx(() -> closeAtVenue(order.id(), OrderState.EXPIRED));
+            default -> log.warn("Venue answer for order {} was {}; ignored", order.id(), result);
+        }
+    }
+
+    /**
+     * Reconciler: closes an order that was never sent. NEW becomes RISK_REJECTED (no risk decision), APPROVED goes
+     * through SENT to REJECTED exactly like {@link #rejectWithoutSending}. Returns false when the order moved on.
+     */
+    boolean closeStuckNotSent(UUID orderId) {
+        return inTx(() -> {
+            Order current = orders.find(orderId).orElseThrow();
+            switch (current.state()) {
+                case NEW -> lifecycle.riskDecided(current, OrderState.RISK_REJECTED, STUCK_NOT_SENT, null);
+                case APPROVED -> lifecycle.transition(
+                        lifecycle.transition(current, OrderState.SENT, null), OrderState.REJECTED, STUCK_NOT_SENT);
+                default -> {
+                    return false;
+                }
             }
+            return true;
         });
+    }
+
+    /** Reconciler: a SENT order with no answer becomes UNKNOWN. Returns false when the order moved on. */
+    boolean markStuckSent(UUID orderId) {
+        return moveFrom(orderId, OrderState.SENT, OrderState.UNKNOWN, STUCK_SENT);
+    }
+
+    /** Reconciler: an UNKNOWN order the venue does not know is REJECTED. Returns false when the order moved on. */
+    boolean rejectUnknown(UUID orderId, String reason) {
+        return moveFrom(orderId, OrderState.UNKNOWN, OrderState.REJECTED, reason);
+    }
+
+    /**
+     * Reconciler: applies what the venue says about an UNKNOWN order. The order first becomes ACKED with the venue
+     * order id (an allowed UNKNOWN transition), then the answer is applied like a resting check, so a fill goes
+     * through {@link FillRecorder}. A failure after the ACK leaves an ACKED order that the open-order checker resolves.
+     */
+    void resolveUnknown(UUID orderId, VenueResult result, Instrument instrument) {
+        String venueOrderId = switch (result) {
+            case VenueResult.Filled filled -> filled.venueOrderId();
+            case VenueResult.Resting resting -> resting.venueOrderId();
+            case VenueResult.Cancelled cancelled -> cancelled.venueOrderId();
+            case VenueResult.Expired expired -> expired.venueOrderId();
+            case VenueResult.Rejected rejected -> null;
+        };
+        if (venueOrderId == null) {
+            log.warn("Venue answered {} for UNKNOWN order {}; ignored", result, orderId);
+            return;
+        }
+        Order acked = inTx(() -> {
+            Order current = orders.find(orderId).orElseThrow();
+            return current.state() == OrderState.UNKNOWN
+                    ? lifecycle.transition(current, OrderState.ACKED, RECONCILED, venueOrderId)
+                    : null;
+        });
+        if (acked != null && !(result instanceof VenueResult.Resting)) {
+            applyVenueResult(acked, result, instrument);
+        }
+    }
+
+    /** Reconciler: applies the venue's answer for an order that is still open here (a fill we have not recorded). */
+    void applyResolved(Order order, VenueResult result, Instrument instrument) {
+        applyVenueResult(order, result, instrument);
+    }
+
+    private boolean moveFrom(UUID orderId, OrderState from, OrderState to, String reason) {
+        return inTx(() -> {
+            Order current = orders.find(orderId).orElseThrow();
+            if (current.state() != from) {
+                return false;
+            }
+            lifecycle.transition(current, to, reason);
+            return true;
+        });
+    }
+
+    /** The venue ended the order (cancelled or expired). Re-reads the order; a state that moved on is left alone. */
+    private Order closeAtVenue(UUID orderId, OrderState target) {
+        Order current = orders.find(orderId).orElseThrow();
+        if (target == OrderState.CANCELLED && current.state().isOpen()) {
+            current = lifecycle.transition(current, OrderState.CANCEL_REQUESTED, null);
+        }
+        if (current.state().canTransitionTo(target)) {
+            return lifecycle.transition(current, target, null);
+        }
+        log.info("Order {} is {}; venue {} ignored", orderId, current.state(), target);
+        return current;
     }
 
     public Optional<OrderDetails> details(UUID orderId) {
@@ -171,7 +280,10 @@ public class OrderService {
         if (venue.isEmpty()) {
             return rejectWithoutSending(approved, NO_TRADING_VENUE);
         }
-        Order sent = inTx(() -> lifecycle.transition(approved, OrderState.SENT, null));
+        Order sent = inTx(() -> moveToSent(approved));
+        if (sent.state() == OrderState.REJECTED) {
+            return sent;
+        }
         VenueResult result;
         try {
             result = venue.get().place(sent, instrument);
@@ -180,6 +292,18 @@ public class OrderService {
             return inTx(() -> lifecycle.transition(sent, OrderState.UNKNOWN, VENUE_ERROR));
         }
         return onPlaced(sent, result, instrument);
+    }
+
+    /**
+     * APPROVED to SENT, re-reading the halt in the same transaction: an order approved just before a kill must not
+     * reach the venue. A halted non-flatten order goes SENT to REJECTED (HALTED) without a venue call.
+     */
+    private Order moveToSent(Order approved) {
+        Order sent = lifecycle.transition(approved, OrderState.SENT, null);
+        if (tradingState.halted() && !isKillSwitchFlatten(approved)) {
+            return lifecycle.transition(sent, OrderState.REJECTED, HALTED);
+        }
+        return sent;
     }
 
     private Order onPlaced(Order sent, VenueResult result, Instrument instrument) {
@@ -237,7 +361,12 @@ public class OrderService {
     }
 
     private static boolean isKillSwitchFlatten(Order order) {
-        return order.source() == OrderSource.KILL_SWITCH && order.reduceOnly();
+        return isKillSwitchFlatten(order.source(), order.reduceOnly());
+    }
+
+    /** Kill flattens are exempt from the halt and from an instrument's {@code tradingEnabled}. */
+    static boolean isKillSwitchFlatten(OrderSource source, boolean reduceOnly) {
+        return source == OrderSource.KILL_SWITCH && reduceOnly;
     }
 
     /** True when filling the order would grow the position or flip its side. */
@@ -257,7 +386,7 @@ public class OrderService {
     private Order newOrder(OrderIntent i, long instrumentId) {
         Instant now = clock.instant();
         return new Order(UUID.randomUUID(), ClientOrderIds.fromKey(i.idempotencyKey()), i.idempotencyKey(),
-                trading.mode().venue(), instrumentId, i.symbol(), i.side(), i.type(), i.size(), i.limitPrice(),
+                i.venue() != null ? i.venue() : trading.mode().venue(), instrumentId, i.symbol(), i.side(), i.type(), i.size(), i.limitPrice(),
                 i.timeInForce(), i.reduceOnly(), OrderState.NEW, 0, null, BigDecimal.ZERO, null, i.source(), null, now,
                 now, 0);
     }

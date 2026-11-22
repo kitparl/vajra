@@ -21,6 +21,11 @@ public class DeltaRateLimitGuard {
         }
     }
 
+    /** Non-throwing form of {@link #checkAllowed()}. */
+    public boolean isPaused() {
+        return clock.instant().isBefore(pausedUntil);
+    }
+
     public void pauseFor(Duration duration) {
         pausedUntil = clock.instant().plus(duration);
     }

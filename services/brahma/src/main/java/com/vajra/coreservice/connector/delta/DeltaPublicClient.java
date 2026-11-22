@@ -97,7 +97,7 @@ public class DeltaPublicClient {
         }
     }
 
-    private static Duration resetDelay(HttpHeaders headers) {
+    static Duration resetDelay(HttpHeaders headers) {
         String reset = headers == null ? null : headers.getFirst("X-RATE-LIMIT-RESET");
         if (reset == null) {
             return DEFAULT_RATE_LIMIT_PAUSE;

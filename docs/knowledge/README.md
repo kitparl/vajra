@@ -37,6 +37,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0024 | Risk gate and kill-switch (maryada + brahma, Phase 2 slice 3) | decision |
 | 0025 | Role names in code, Sanskrit only in folder names | decision |
 | 0026 | Heartbeat strategy and the Kafka signal path (Phase 2 slice 4) | decision |
+| 0027 | Delta testnet trading and reconciliation (Phase 2 slice 5) | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.

@@ -1,6 +1,7 @@
 package com.vajra.coreservice.oms;
 
 import com.vajra.coreservice.audit.AuditWriter;
+import com.vajra.coreservice.connector.Venue;
 import com.vajra.coreservice.connector.VenueResult;
 import com.vajra.coreservice.instrument.Instrument;
 import com.vajra.coreservice.position.Position;
@@ -20,7 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Applies a venue fill: fill row, order update, position update and their audit events in ONE transaction (spec
  * §7.6 step 5). A reduce-only order whose fill would now grow or flip the position (it moved since the order was
- * accepted) is cancelled instead ({@code REDUCE_ONLY_WOULD_INCREASE}). A version conflict (e.g. a market fill and a matcher fill racing on the same position) retries with
+ * accepted) is cancelled instead on the paper venue; on a real venue the fill is recorded and logged at ERROR ({@code REDUCE_ONLY_WOULD_INCREASE}). A version conflict (e.g. a market fill and a matcher fill racing on the same position) retries with
  * freshly read order and position, up to {@value #MAX_ATTEMPTS} attempts.
  */
 @Component
@@ -79,9 +80,14 @@ class FillRecorder {
         Position current = positions.find(order.venue(), order.instrumentId())
                 .orElseGet(() -> Position.flat(order.venue(), order.instrumentId(), order.symbol()));
         if (order.reduceOnly() && PositionMath.increasesOrFlips(current.size(), order.side(), size)) {
-            log.warn("Fill {} refused: reduce-only order {} would increase or flip position {}", filled.venueFillId(),
-                    orderId, current.size());
-            return cancelReduceOnly(order);
+            if (order.venue() == Venue.PAPER) {
+                log.warn("Fill {} refused: reduce-only order {} would increase or flip position {}",
+                        filled.venueFillId(), orderId, current.size());
+                return cancelReduceOnly(order);
+            }
+            // A real venue enforces reduce-only, so the fill already happened there: it is a fact, never refused.
+            log.error("reduce-only order {} filled at {} although local position {} says it increases risk; "
+                    + "local and venue disagree, recorded venue fill", orderId, order.venue(), current.size());
         }
         Instant now = clock.instant();
         Fill fill = new Fill(UUID.randomUUID(), order.id(), order.venue(), filled.venueFillId(), filled.price(), size,

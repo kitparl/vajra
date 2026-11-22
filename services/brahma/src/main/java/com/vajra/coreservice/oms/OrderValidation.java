@@ -22,16 +22,19 @@ final class OrderValidation {
         if (i.symbol() == null || i.symbol().isBlank() || i.side() == null || i.type() == null || i.source() == null) {
             throw ApiException.badRequest("symbol, side, type and source are required");
         }
+        if (i.venue() != null && !OrderService.isKillSwitchFlatten(i.source(), i.reduceOnly())) {
+            throw ApiException.badRequest("venue may only be set on a kill-switch reduce-only order");
+        }
         if (i.size() <= 0) {
             throw ApiException.badRequest("size must be positive");
         }
         return new OrderIntent(i.idempotencyKey(), i.symbol(), i.side(), i.type(), i.size(), i.limitPrice(),
-                timeInForce(i), i.reduceOnly(), i.source(), i.signalId());
+                timeInForce(i), i.reduceOnly(), i.source(), i.signalId(), i.venue());
     }
 
     /** Checks the intent against the instrument it trades. */
     static void checkInstrument(OrderIntent i, Instrument instrument) {
-        if (!instrument.tradingEnabled()) {
+        if (!instrument.tradingEnabled() && !OrderService.isKillSwitchFlatten(i.source(), i.reduceOnly())) {
             throw ApiException.badRequest("trading is disabled for " + i.symbol());
         }
         if (BigDecimal.valueOf(i.size()).compareTo(instrument.minSize()) < 0) {

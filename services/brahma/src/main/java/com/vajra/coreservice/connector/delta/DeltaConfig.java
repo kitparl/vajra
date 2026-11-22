@@ -3,6 +3,7 @@ package com.vajra.coreservice.connector.delta;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -23,5 +24,19 @@ class DeltaConfig {
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(http);
         factory.setReadTimeout(Duration.ofSeconds(5));
         return new DeltaPublicClient(RestClient.builder().requestFactory(factory), guard);
+    }
+
+    @Bean
+    DeltaCredentials deltaCredentials(
+            @Value("${vajra.delta.api-key:}") String apiKey, @Value("${vajra.delta.api-secret:}") String apiSecret) {
+        return new DeltaCredentials(apiKey, apiSecret);
+    }
+
+    @Bean
+    DeltaPrivateClient deltaPrivateClient(DeltaRateLimitGuard guard, DeltaCredentials credentials, Clock clock) {
+        HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(http);
+        factory.setReadTimeout(Duration.ofSeconds(5));
+        return new DeltaPrivateClient(RestClient.builder().requestFactory(factory), guard, credentials, clock);
     }
 }

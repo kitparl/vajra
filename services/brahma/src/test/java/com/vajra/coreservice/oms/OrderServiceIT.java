@@ -3,12 +3,20 @@ package com.vajra.coreservice.oms;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.vajra.coreservice.api.ApiException;
 import com.vajra.coreservice.connector.Quote;
 import com.vajra.coreservice.connector.TradingVenue;
 import com.vajra.coreservice.connector.Venue;
+import com.vajra.coreservice.connector.VenueResult;
+import com.vajra.coreservice.risk.RiskDecision;
+import com.vajra.coreservice.connector.delta.DeltaTradingVenue;
+import com.vajra.coreservice.connector.delta.DeltaFill;
+import com.vajra.coreservice.connector.delta.DeltaOrder;
+import com.vajra.coreservice.connector.delta.DeltaPrivateClient;
 import com.vajra.coreservice.instrument.Instrument;
 import com.vajra.coreservice.instrument.InstrumentRepository;
 import com.vajra.coreservice.marketdata.QuoteCache;
@@ -33,6 +41,9 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -77,7 +88,7 @@ class OrderServiceIT {
     OrderService orderService;
 
     @Autowired
-    PaperMatcher matcher;
+    OpenOrderChecker matcher;
 
     @Autowired
     InstrumentRepository instruments;
@@ -307,6 +318,20 @@ class OrderServiceIT {
     }
 
     @Test
+    void paperReduceOnlyStillCancelledLocally() {
+        restingReduceOnlyDoesNotFlipOnFill();
+    }
+
+    @Test
+    void venueOnNonKillIntentIsRejected() {
+        assertBadRequest(new OrderIntent("venue-1", "BTCUSD", Side.BUY, OrderType.MARKET, 1, null, null, false,
+                OrderSource.MANUAL, null, Venue.DELTA_TESTNET));
+        assertBadRequest(new OrderIntent("venue-2", "BTCUSD", Side.SELL, OrderType.MARKET, 1, null, null, false,
+                OrderSource.KILL_SWITCH, null, Venue.PAPER));
+        assertThat(orderCount()).isZero();
+    }
+
+    @Test
     void restingReduceOnlyDoesNotFlipOnFill() {
         orderService.place(market("rof-open", Side.BUY, 1));
         Order resting = orderService.place(new OrderIntent("rof-rest", "BTCUSD", Side.SELL, OrderType.LIMIT, 1,
@@ -411,22 +436,36 @@ class OrderServiceIT {
     }
 
     @Nested
-    @TestPropertySource(properties = "vajra.trading.mode=DELTA_TESTNET")
+    @TestPropertySource(properties = {
+        "vajra.trading.mode=DELTA_TESTNET", "vajra.delta.api-key=fake-test-key", "vajra.delta.api-secret=fake-test-secret"
+    })
     class DeltaTestnetMode {
+
+        /** Replaces the signed client so the startup check never calls Delta. */
+        @MockitoBean
+        DeltaPrivateClient deltaPrivateClient;
 
         @Autowired
         OrderService deltaOrderService;
 
         @Test
-        void deltaTestnetModeHasNoTradingVenue() {
+        void deltaTestnetModeRoutesOrdersToTheDeltaVenue() {
+            when(deltaPrivateClient.placeOrder(any())).thenReturn(new DeltaOrder(
+                    777L, ClientOrderIds.fromKey("delta-1"), "closed", 1, 0, new BigDecimal("50010"), new BigDecimal("0.02"), 1));
+            when(deltaPrivateClient.fills(any())).thenReturn(List.of(new DeltaFill(
+                    "delta-fill-1", 777L, 1, new BigDecimal("50010"), new BigDecimal("0.02"), "taker", clock.instant())));
+
             Order order = deltaOrderService.place(market("delta-1", Side.BUY, 1)).order();
 
             assertThat(order.venue()).isEqualTo(Venue.DELTA_TESTNET);
-            assertThat(order.state()).isEqualTo(OrderState.REJECTED);
-            assertThat(order.reason()).isEqualTo("NO_TRADING_VENUE");
+            assertThat(order.state()).isEqualTo(OrderState.FILLED);
+            assertThat(order.venueOrderId()).isEqualTo("777");
             assertThat(states(order.id())).containsExactly(
-                    OrderState.NEW, OrderState.APPROVED, OrderState.SENT, OrderState.REJECTED);
-            assertThat(fills(order.id())).isEmpty();
+                    OrderState.NEW, OrderState.APPROVED, OrderState.SENT, OrderState.ACKED, OrderState.FILLED);
+            assertThat(fills(order.id())).hasSize(1);
+            assertThat(fills(order.id()).get(0).liquidity()).isEqualTo("TAKER");
+            assertThat(positions.find(Venue.DELTA_TESTNET, btcId).orElseThrow().size()).isEqualTo(1);
+            assertThat(positions.find(Venue.PAPER, btcId)).isEmpty();
         }
     }
 
@@ -451,6 +490,78 @@ class OrderServiceIT {
                     OrderState.NEW, OrderState.APPROVED, OrderState.SENT, OrderState.UNKNOWN);
             assertThat(fills(order.id())).isEmpty();
             assertThat(positions.find(Venue.PAPER, btcId)).isEmpty();
+        }
+    }
+
+    @Nested
+    class HaltBetweenApprovedAndSent {
+
+        @MockitoBean
+        TradingVenue venue;
+
+        @MockitoBean
+        ApprovingRiskGate haltingGate;
+
+        @Test
+        void orderApprovedBeforeHaltIsNotSentAfterHalt() {
+            when(venue.venue()).thenReturn(Venue.PAPER);
+            when(haltingGate.approve(any())).thenAnswer(inv -> {
+                tradingState.setHalted(true, "halted mid-flight", clock.instant());
+                return new RiskDecision(true, null, ApprovingRiskGate.DECISION_ID);
+            });
+
+            Order order = orderService.place(market("halt-mid", Side.BUY, 1)).order();
+
+            assertThat(order.state()).isEqualTo(OrderState.REJECTED);
+            assertThat(order.reason()).isEqualTo("HALTED");
+            assertThat(states(order.id())).containsExactly(
+                    OrderState.NEW, OrderState.APPROVED, OrderState.SENT, OrderState.REJECTED);
+            verify(venue, never()).place(any(), any());
+        }
+    }
+
+    @Nested
+    @TestPropertySource(properties = {
+        "vajra.trading.mode=DELTA_TESTNET", "vajra.delta.api-key=fake-test-key", "vajra.delta.api-secret=fake-test-secret"
+    })
+    @ExtendWith(OutputCaptureExtension.class)
+    class ReduceOnlyOnRealVenue {
+
+        @MockitoBean
+        DeltaPrivateClient deltaPrivateClient;
+
+        @MockitoBean
+        DeltaTradingVenue deltaVenue;
+
+        @Test
+        void realVenueReduceOnlyFillIsRecordedAndLoggedNotCancelled(CapturedOutput output) {
+            Order resting = restingReduceOnlyThenFlatten();
+
+            orderService.onRestingCheck(resting);
+
+            Order after = orderService.details(resting.id()).orElseThrow().order();
+            assertThat(after.state()).isEqualTo(OrderState.FILLED);
+            assertThat(fills(resting.id())).hasSize(1);
+            assertThat(positions.find(Venue.DELTA_TESTNET, btcId).orElseThrow().size()).isEqualTo(-1);
+            assertThat(output.getOut()).contains("local and venue disagree, recorded venue fill");
+            verify(deltaVenue, never()).cancel(any());
+        }
+
+        private Order restingReduceOnlyThenFlatten() {
+            when(deltaVenue.venue()).thenReturn(Venue.DELTA_TESTNET);
+            when(deltaVenue.place(any(), any())).thenReturn(new VenueResult.Resting("v-ro"));
+            when(deltaVenue.checkResting(any(), any())).thenReturn(Optional.of(
+                    new VenueResult.Filled("v-ro", "f-ro", new BigDecimal("51000"), new BigDecimal("0.02"), "MAKER")));
+            positions.save(new Position(Venue.DELTA_TESTNET, btcId, "BTCUSD", 1, new BigDecimal("50000"),
+                    BigDecimal.ZERO, BigDecimal.ZERO, clock.instant(), 0));
+            Order resting = orderService.place(new OrderIntent("ro-venue", "BTCUSD", Side.SELL, OrderType.LIMIT, 1,
+                    new BigDecimal("51000"), TimeInForce.GTC, true, OrderSource.MANUAL, null)).order();
+            assertThat(resting.state()).isEqualTo(OrderState.ACKED);
+            Position current = positions.find(Venue.DELTA_TESTNET, btcId).orElseThrow();
+            positions.save(new Position(current.venue(), current.instrumentId(), current.symbol(), 0,
+                    current.avgEntryPrice(), current.realizedPnl(), current.feesPaid(), clock.instant(),
+                    current.version()));
+            return resting;
         }
     }
 

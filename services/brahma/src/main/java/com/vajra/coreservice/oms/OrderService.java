@@ -86,7 +86,7 @@ public class OrderService {
         String requestHash = intent.requestHash();
         Order order = newOrder(intent, instrumentId);
         try {
-            tx.executeWithoutResult(status -> lifecycle.create(order, requestHash));
+            tx.executeWithoutResult(status -> lifecycle.create(order, requestHash, intent.signalId()));
         } catch (DuplicateKeyException e) {
             return existing(intent, order.clientOrderId(), requestHash);
         }
@@ -136,8 +136,8 @@ public class OrderService {
 
     public Optional<OrderDetails> details(UUID orderId) {
         return orders.find(orderId)
-                .map(o -> new OrderDetails(o, orders.riskDecisionId(orderId).orElse(null), orders.transitions(orderId),
-                        fills.findByOrder(orderId)));
+                .map(o -> new OrderDetails(o, orders.riskDecisionId(orderId).orElse(null), orders.signalId(orderId).orElse(null),
+                        orders.transitions(orderId), fills.findByOrder(orderId)));
     }
 
     /** Newest first, at most 100. */
@@ -270,7 +270,7 @@ public class OrderService {
         try {
             return inTx(step);
         } catch (OptimisticLockingFailureException e) {
-            throw ApiException.conflict("order changed, retry");
+            throw ApiException.retryableConflict("order changed, retry");
         }
     }
 }

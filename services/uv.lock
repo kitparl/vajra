@@ -14,8 +14,23 @@ dev = [
     { name = "httpx2", specifier = "==2.16.2" },
     { name = "pytest", specifier = "==9.2.0" },
     { name = "ruff", specifier = "==0.17.6" },
-    { name = "testcontainers", specifier = "==4.15.0" },
+    { name = "testcontainers", extras = ["kafka"], specifier = "==4.15.0" },
     { name = "vajra-contracts", directory = "../contracts/python" },
+]
+
+[[package]]
+name = "aiokafka"
+version = "0.15.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/4f/36c64527c239c847a35915e38a4a50b6a7bb0f7e569bfde377d60a2011f3/aiokafka-0.15.0.tar.gz", hash = "sha256:8457e45565544c0888679943a0de2a284526d2ce489ad861f4b740f2f58b5dd0", size = 633412, upload-time = "2026-10-28T17:05:25.935Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/1c/86fb264bc535a4ddccebe96a7e4816792a8d85fb1fe3b21742b72281b5aa/aiokafka-0.15.0-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:85c93160c2a46f2d4ae9b12c7c4f2ee6b0751802e458cdf70263643f9e22658b", size = 369167, upload-time = "2026-10-28T17:05:02.379Z" },
+    { url = "https://files.pythonhosted.org/packages/15/15/eb6a67017370d77a90fd3e926f069b7e7eaa486f405b5427e621187d6932/aiokafka-0.15.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:1f2206257c623e4d33a540dbc051763ff9a946ebd76095df5684b7eb19dd5691", size = 372222, upload-time = "2026-10-28T17:05:04.237Z" },
+    { url = "https://files.pythonhosted.org/packages/29/fd/24939034ccec013b473c7637589979ece3fd908333785f21b767cffd9021/aiokafka-0.15.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:bc028df26d700b32a4549658bcb9e9694109945460d1716c406e2d3ce035b0ec", size = 1233197, upload-time = "2026-10-28T17:05:05.9Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/c3/86138eda9303e19e5c04b9b904490d33bfec4a0a5b15010972b1c0fa3938/aiokafka-0.15.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f208274b4e4e852bad1763fd3c62884673021513f080b736a01c119d4792c63a", size = 1214948, upload-time = "2026-10-28T17:05:07.753Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/22/c5a446da5af5a42c0850c87f973619cbab396727e87711d01a2634c78e19/aiokafka-0.15.0-cp314-cp314-win32.whl", hash = "sha256:aebb59af49e216f6147888be66e7b04a4075f7ec857db9376801d7f1845c9a77", size = 321994, upload-time = "2026-10-28T17:05:09.34Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/4b/9a5391a1c1807edda3c80a9a6c0078af83f291cbc3b0ca5e477becf4c043/aiokafka-0.15.0-cp314-cp314-win_amd64.whl", hash = "sha256:2db1a5074691b1794d22943262124e2711704b27624765db792b4b80d57d58f4", size = 338337, upload-time = "2026-10-28T17:05:10.797Z" },
+    { url = "https://files.pythonhosted.org/packages/65/b0/f8973328bfb8e585c35cb499d1bbbfe3dd0d73258f05ac0ba706da63504e/aiokafka-0.15.0-cp314-cp314-win_arm64.whl", hash = "sha256:26d76a3b3171ef9d3b62a6a682c16ed887a7f3392a832db3aab26aa786355252", size = 331121, upload-time = "2026-10-28T17:05:12.823Z" },
 ]
 
 [[package]]
@@ -562,6 +577,7 @@ name = "signal-service"
 version = "0.1.0"
 source = { editable = "shankha" }
 dependencies = [
+    { name = "aiokafka" },
     { name = "uvicorn" },
     { name = "vajra-common" },
     { name = "vajra-contracts" },
@@ -569,6 +585,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiokafka", specifier = "==0.15.0" },
     { name = "uvicorn", specifier = "==0.54.0" },
     { name = "vajra-common", editable = "common-py" },
     { name = "vajra-contracts", directory = "../contracts/python" },

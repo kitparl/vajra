@@ -92,10 +92,10 @@ class FillRecorder {
         }
         Order updated = lifecycle.fill(order, OrderState.FILLED, order.size(), averagePrice(order, fill),
                 order.fees().add(fill.fee()));
-        audit.record(OmsEvents.FILL_CREATED, OmsEvents.fillCreated(fill, updated));
+        audit.record(OmsEvents.FILL_CREATED, order.symbol(), OmsEvents.fillCreated(fill, updated));
         Position saved = positions.save(PositionMath.applyFill(current, order.side(), size, fill.price(),
                 instrument.contractValue(), fill.fee(), now));
-        audit.record(OmsEvents.POSITION_UPDATED, OmsEvents.positionUpdated(saved));
+        audit.record(OmsEvents.POSITION_UPDATED, saved.symbol(), OmsEvents.positionUpdated(saved));
         return updated;
     }
 

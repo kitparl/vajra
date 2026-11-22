@@ -6,8 +6,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Objects;
+import java.util.UUID;
 
-/** What the caller asks for. The idempotency key identifies the request; every other field is its body. */
+/**
+ * What the caller asks for. The idempotency key identifies the request; every other field is its body. {@code signalId}
+ * is null for manual and kill-switch orders.
+ */
 public record OrderIntent(
         String idempotencyKey,
         String symbol,
@@ -17,7 +21,8 @@ public record OrderIntent(
         BigDecimal limitPrice,
         TimeInForce timeInForce,
         boolean reduceOnly,
-        OrderSource source) {
+        OrderSource source,
+        UUID signalId) {
 
     /**
      * SHA-256 hex of every field except the key. A replay with the same key must have the same hash. Prices are
@@ -33,6 +38,10 @@ public record OrderIntent(
                 Objects.toString(timeInForce, ""),
                 Boolean.toString(reduceOnly),
                 Objects.toString(source, ""));
+        // Appended only for signal orders so the stored hashes of manual and kill orders stay valid.
+        if (signalId != null) {
+            body += "|" + signalId;
+        }
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(body.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);

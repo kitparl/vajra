@@ -64,15 +64,15 @@ class OmsRepositoriesIT {
 
     @Test
     void duplicateClientOrderIdIsRejected() {
-        orders.insert(order("dup-1"), "hash");
+        orders.insert(order("dup-1"), "hash", null);
 
-        assertThatThrownBy(() -> orders.insert(order("dup-1"), "hash")).isInstanceOf(DuplicateKeyException.class);
+        assertThatThrownBy(() -> orders.insert(order("dup-1"), "hash", null)).isInstanceOf(DuplicateKeyException.class);
     }
 
     @Test
     void insertedOrderRoundTripsWithSymbolAndHash() {
         Order o = order("round-1");
-        orders.insert(o, "h-round");
+        orders.insert(o, "h-round", null);
 
         Order found = orders.find(o.id()).orElseThrow();
         assertThat(found).usingRecursiveComparison().withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
@@ -86,7 +86,7 @@ class OmsRepositoriesIT {
     @Test
     void staleVersionUpdateIsRejected() {
         Order o = order("stale-1");
-        orders.insert(o, "hash");
+        orders.insert(o, "hash", null);
         Order loaded = orders.find(o.id()).orElseThrow();
 
         Order updated = orders.update(withState(loaded, OrderState.APPROVED));
@@ -101,7 +101,7 @@ class OmsRepositoriesIT {
     void transitionsAndQueriesWork() {
         Order open = order("q-open");
         open = withState(open, OrderState.ACKED);
-        orders.insert(open, "h");
+        orders.insert(open, "h", null);
         orders.addTransition(open.id(), new OrderTransition(null, OrderState.NEW, "created", NOW));
         orders.addTransition(open.id(), new OrderTransition(OrderState.NEW, OrderState.APPROVED, null, NOW.plusSeconds(1)));
 
@@ -117,7 +117,7 @@ class OmsRepositoriesIT {
     @Test
     void replayedFillIsIgnored() {
         Order o = order("fill-1");
-        orders.insert(o, "hash");
+        orders.insert(o, "hash", null);
         Fill fill = new Fill(UUID.randomUUID(), o.id(), Venue.PAPER, "vf-1", new BigDecimal("100.5"), 2,
                 new BigDecimal("0.05"), "taker", NOW);
         Fill replay = new Fill(UUID.randomUUID(), o.id(), Venue.PAPER, "vf-1", new BigDecimal("100.5"), 2,
@@ -161,7 +161,7 @@ class OmsRepositoriesIT {
         String orderId = UUID.randomUUID().toString();
         TransactionTemplate tx = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
 
-        tx.executeWithoutResult(s -> audit.record("order.updated", OrderUpdated.newBuilder().setOrderId(orderId).build()));
+        tx.executeWithoutResult(s -> audit.record("order.updated", "BTCUSD", OrderUpdated.newBuilder().setOrderId(orderId).build()));
 
         byte[] payload = jdbc.sql("select payload from audit_event where event_type = 'order.updated'")
                 .query(byte[].class).single();
@@ -175,7 +175,7 @@ class OmsRepositoriesIT {
 
     @Test
     void auditWriterRequiresTransaction() {
-        assertThatThrownBy(() -> audit.record("order.updated", OrderUpdated.getDefaultInstance()))
+        assertThatThrownBy(() -> audit.record("order.updated", "BTCUSD", OrderUpdated.getDefaultInstance()))
                 .isInstanceOf(IllegalTransactionStateException.class);
     }
 

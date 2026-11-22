@@ -26,7 +26,7 @@ final class OrderValidation {
             throw ApiException.badRequest("size must be positive");
         }
         return new OrderIntent(i.idempotencyKey(), i.symbol(), i.side(), i.type(), i.size(), i.limitPrice(),
-                timeInForce(i), i.reduceOnly(), i.source());
+                timeInForce(i), i.reduceOnly(), i.source(), i.signalId());
     }
 
     /** Checks the intent against the instrument it trades. */

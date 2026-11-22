@@ -7,6 +7,7 @@ dependencies = [
     "vajra-common",
     "vajra-contracts",
     "uvicorn==0.54.0",
+    "aiokafka==0.15.0",
 ]
 
 [build-system]

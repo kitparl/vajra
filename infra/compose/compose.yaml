@@ -65,6 +65,18 @@ services:
       timeout: 3s
       retries: 30
 
+  # One-shot: creates topics (auto-create is off). Nothing depends on it, so a Kafka outage never blocks services.
+  kafka-init:
+    image: ${KAFKA_IMAGE}
+    entrypoint: ["/bin/sh", "/create-topics.sh"]
+    environment:
+      KAFKA_HEAP_OPTS: -Xmx128m
+    volumes:
+      - ../kafka/create-topics.sh:/create-topics.sh:ro
+    depends_on: { kafka: { condition: service_healthy } }
+    mem_limit: 256m
+    restart: "no"
+
   redis:
     image: ${REDIS_IMAGE}
     command: ["redis-server", "--maxmemory", "48mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
@@ -86,6 +98,7 @@ services:
       RISK_BASE_URL: http://risk-service:8082
       RISK_API_TOKEN: ${RISK_API_TOKEN}
       CORE_INTERNAL_TOKEN: ${CORE_INTERNAL_TOKEN}
+      KAFKA_BOOTSTRAP: kafka:9092
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 384m
     restart: unless-stopped
@@ -124,6 +137,9 @@ services:
       DB_URL: postgresql+psycopg://postgres:5432/vajra
       DB_USER: signal_svc
       DB_PASSWORD: ${SIGNAL_DB_PASSWORD}
+      KAFKA_BOOTSTRAP: kafka:9092
+      TRADING_MODE: ${TRADING_MODE:-PAPER}
+      HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-900}
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 256m
     restart: unless-stopped

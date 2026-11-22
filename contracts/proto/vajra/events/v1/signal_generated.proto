@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package vajra.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "com.vajra.contracts.events.v1";
+
+// Emitted by signal-service when a strategy wants to trade. core-service turns it into an order.
+message SignalGenerated {
+  string signal_id = 1;  // UUID
+  string strategy = 2;   // "heartbeat"
+  string symbol = 3;     // "BTCUSD"
+  string side = 4;       // "BUY" | "SELL"
+  string order_type = 5; // "MARKET"
+  int64 size = 6;        // contracts
+  google.protobuf.Timestamp generated_at = 7;
+}

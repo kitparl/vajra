@@ -38,6 +38,7 @@ public final class TestDatabase {
         registry.add("DB_URL", container::getJdbcUrl);
         registry.add("DB_USER", () -> ROLE);
         registry.add("DB_PASSWORD", () -> ROLE_PASSWORD);
+        registry.add("vajra.signals.enabled", () -> "false");
     }
 
     /** DataSource as the service role, with core-service's Flyway migrations applied (no Spring context). */
@@ -49,12 +50,20 @@ public final class TestDatabase {
 
     /** Image tag lives only in infra/compose/.env.example (one place per ecosystem). */
     private static String postgresImage() {
+        return imageFromEnvExample("POSTGRES_IMAGE");
+    }
+
+    public static String kafkaImage() {
+        return imageFromEnvExample("KAFKA_IMAGE");
+    }
+
+    private static String imageFromEnvExample(String name) {
         try {
             return Files.readAllLines(REPO_ROOT.resolve("infra/compose/.env.example")).stream()
-                    .filter(line -> line.startsWith("POSTGRES_IMAGE="))
-                    .map(line -> line.substring("POSTGRES_IMAGE=".length()).trim())
+                    .filter(line -> line.startsWith(name + "="))
+                    .map(line -> line.substring(name.length() + 1).trim())
                     .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("POSTGRES_IMAGE missing in .env.example"));
+                    .orElseThrow(() -> new IllegalStateException(name + " missing in .env.example"));
         } catch (IOException e) {
             throw new IllegalStateException("cannot read infra/compose/.env.example", e);
         }

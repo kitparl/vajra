@@ -31,7 +31,7 @@ public class AuditWriter {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void record(String eventType, Message payload) {
+    public void record(String eventType, String key, Message payload) {
         // Checked explicitly as well: the annotation has no effect when no Spring proxy is involved.
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalTransactionStateException("audit event " + eventType + " must be written inside a transaction");
@@ -45,10 +45,11 @@ public class AuditWriter {
                 .setProducer(PRODUCER)
                 .setPayload(Any.pack(payload))
                 .build();
-        jdbc.sql("insert into audit_event (id, event_type, payload, occurred_at) "
-                        + "values (:id, :eventType, :payload, :occurredAt)")
+        jdbc.sql("insert into audit_event (id, event_type, event_key, payload, occurred_at) "
+                        + "values (:id, :eventType, :key, :payload, :occurredAt)")
                 .param("id", id)
                 .param("eventType", eventType)
+                .param("key", key)
                 .param("payload", envelope.toByteArray())
                 .param("occurredAt", OffsetDateTime.ofInstant(now, ZoneOffset.UTC))
                 .update();

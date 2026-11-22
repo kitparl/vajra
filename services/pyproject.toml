@@ -7,7 +7,7 @@ members = ["common-py", "shankha", "manthan"]
 dev = [
     "pytest==9.2.0",
     "ruff==0.17.6",
-    "testcontainers==4.15.0",
+    "testcontainers[kafka]==4.15.0",
     "httpx2==2.16.2",
     "vajra-contracts",
 ]

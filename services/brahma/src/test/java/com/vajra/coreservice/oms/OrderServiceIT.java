@@ -172,7 +172,7 @@ class OrderServiceIT {
         tradingState.setHalted(true, "kill switch", clock.instant());
 
         Order order = orderService.place(new OrderIntent("halt-ro", "BTCUSD", Side.SELL, OrderType.MARKET, 1, null,
-                null, true, OrderSource.MANUAL)).order();
+                null, true, OrderSource.MANUAL, null)).order();
 
         assertThat(order.state()).isEqualTo(OrderState.RISK_REJECTED);
         assertThat(order.reason()).isEqualTo("HALTED");
@@ -184,7 +184,7 @@ class OrderServiceIT {
         tradingState.setHalted(true, "kill switch", clock.instant());
 
         Order order = orderService.place(new OrderIntent("flat-1", "BTCUSD", Side.SELL, OrderType.MARKET, 2, null,
-                null, true, OrderSource.KILL_SWITCH)).order();
+                null, true, OrderSource.KILL_SWITCH, null)).order();
 
         assertThat(order.state()).isEqualTo(OrderState.FILLED);
         assertThat(order.source()).isEqualTo(OrderSource.KILL_SWITCH);
@@ -254,9 +254,9 @@ class OrderServiceIT {
     @Test
     void disabledInstrumentIsBadRequest() {
         assertBadRequest(new OrderIntent("dis-1", "XRPUSD", Side.BUY, OrderType.MARKET, 1, null, null, false,
-                OrderSource.MANUAL));
+                OrderSource.MANUAL, null));
         assertBadRequest(new OrderIntent("dis-2", "NOPEUSD", Side.BUY, OrderType.MARKET, 1, null, null, false,
-                OrderSource.MANUAL));
+                OrderSource.MANUAL, null));
         assertThat(orderCount()).isZero();
     }
 
@@ -267,11 +267,11 @@ class OrderServiceIT {
         assertBadRequest(limit("tick-3", Side.BUY, 1, "0", TimeInForce.GTC));
         assertBadRequest(limit("tick-4", Side.BUY, 0, "50000", TimeInForce.GTC));
         assertBadRequest(new OrderIntent("tick-5", "BTCUSD", Side.BUY, OrderType.MARKET, 1, new BigDecimal("50000"),
-                null, false, OrderSource.MANUAL));
+                null, false, OrderSource.MANUAL, null));
         assertBadRequest(new OrderIntent("tick-6", "BTCUSD", Side.BUY, OrderType.MARKET, 1, null, TimeInForce.GTC,
-                false, OrderSource.MANUAL));
+                false, OrderSource.MANUAL, null));
         assertBadRequest(new OrderIntent("bad key!", "BTCUSD", Side.BUY, OrderType.MARKET, 1, null, null, false,
-                OrderSource.MANUAL));
+                OrderSource.MANUAL, null));
         assertThat(orderCount()).isZero();
     }
 
@@ -286,7 +286,7 @@ class OrderServiceIT {
     @Test
     void reduceOnlyCannotIncrease() {
         Order order = orderService.place(new OrderIntent("ro-1", "BTCUSD", Side.SELL, OrderType.MARKET, 1, null, null,
-                true, OrderSource.MANUAL)).order();
+                true, OrderSource.MANUAL, null)).order();
 
         assertThat(order.state()).isEqualTo(OrderState.REJECTED);
         assertThat(order.reason()).isEqualTo("REDUCE_ONLY_WOULD_INCREASE");
@@ -300,7 +300,7 @@ class OrderServiceIT {
         orderService.place(market("ro-open", Side.BUY, 2));
 
         Order order = orderService.place(new OrderIntent("ro-close", "BTCUSD", Side.SELL, OrderType.MARKET, 1, null,
-                null, true, OrderSource.MANUAL)).order();
+                null, true, OrderSource.MANUAL, null)).order();
 
         assertThat(order.state()).isEqualTo(OrderState.FILLED);
         assertThat(positions.find(Venue.PAPER, btcId).orElseThrow().size()).isEqualTo(1);
@@ -310,7 +310,7 @@ class OrderServiceIT {
     void restingReduceOnlyDoesNotFlipOnFill() {
         orderService.place(market("rof-open", Side.BUY, 1));
         Order resting = orderService.place(new OrderIntent("rof-rest", "BTCUSD", Side.SELL, OrderType.LIMIT, 1,
-                new BigDecimal("51000"), TimeInForce.GTC, true, OrderSource.MANUAL)).order();
+                new BigDecimal("51000"), TimeInForce.GTC, true, OrderSource.MANUAL, null)).order();
         assertThat(resting.state()).isEqualTo(OrderState.ACKED);
         orderService.place(market("rof-close", Side.SELL, 1));
         assertThat(positions.find(Venue.PAPER, btcId).orElseThrow().size()).isZero();
@@ -484,12 +484,12 @@ class OrderServiceIT {
     }
 
     private static OrderIntent market(String key, Side side, long size) {
-        return new OrderIntent(key, "BTCUSD", side, OrderType.MARKET, size, null, null, false, OrderSource.MANUAL);
+        return new OrderIntent(key, "BTCUSD", side, OrderType.MARKET, size, null, null, false, OrderSource.MANUAL, null);
     }
 
     private static OrderIntent limit(String key, Side side, long size, String price, TimeInForce tif) {
         return new OrderIntent(key, "BTCUSD", side, OrderType.LIMIT, size, price == null ? null : new BigDecimal(price),
-                tif, false, OrderSource.MANUAL);
+                tif, false, OrderSource.MANUAL, null);
     }
 
     private static Instrument instrument(String symbol, boolean enabled, Instant now) {

@@ -25,10 +25,10 @@ class OrderLifecycle {
     }
 
     /** Inserts a NEW order; throws {@link org.springframework.dao.DuplicateKeyException} for a used client order id. */
-    void create(Order order, String requestHash) {
-        orders.insert(order, requestHash);
+    void create(Order order, String requestHash, UUID signalId) {
+        orders.insert(order, requestHash, signalId);
         orders.addTransition(order.id(), new OrderTransition(null, OrderState.NEW, null, order.createdAt()));
-        audit.record(OmsEvents.ORDER_UPDATED, OmsEvents.orderUpdated(order));
+        audit.record(OmsEvents.ORDER_UPDATED, order.symbol(), OmsEvents.orderUpdated(order));
     }
 
     Order transition(Order o, OrderState to, String reason) {
@@ -66,7 +66,7 @@ class OrderLifecycle {
                 o.reduceOnly(), to, filledSize, avgFillPrice, fees, venueOrderId, o.source(),
                 reason == null ? o.reason() : reason, o.createdAt(), now, o.version()));
         orders.addTransition(o.id(), new OrderTransition(o.state(), to, reason, now));
-        audit.record(OmsEvents.ORDER_UPDATED, OmsEvents.orderUpdated(saved));
+        audit.record(OmsEvents.ORDER_UPDATED, saved.symbol(), OmsEvents.orderUpdated(saved));
         return saved;
     }
 }

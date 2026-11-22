@@ -253,12 +253,12 @@ class KillServiceIT {
     }
 
     private static OrderIntent market(String key, Side side, long size) {
-        return new OrderIntent(key, "BTCUSD", side, OrderType.MARKET, size, null, null, false, OrderSource.MANUAL);
+        return new OrderIntent(key, "BTCUSD", side, OrderType.MARKET, size, null, null, false, OrderSource.MANUAL, null);
     }
 
     private static OrderIntent limit(String key, Side side, long size, String price) {
         return new OrderIntent(key, "BTCUSD", side, OrderType.LIMIT, size, new BigDecimal(price), TimeInForce.GTC,
-                false, OrderSource.MANUAL);
+                false, OrderSource.MANUAL, null);
     }
 
     private static <T> T await(Future<T> future) {

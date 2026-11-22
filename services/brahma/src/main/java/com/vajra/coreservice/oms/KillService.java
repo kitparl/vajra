@@ -133,7 +133,7 @@ public class KillService {
     private static OrderIntent flattenIntent(Position position) {
         Side side = position.size() > 0 ? Side.SELL : Side.BUY;
         return new OrderIntent("kill-" + UUID.randomUUID(), position.symbol(), side, OrderType.MARKET,
-                Math.abs(position.size()), null, null, true, OrderSource.KILL_SWITCH);
+                Math.abs(position.size()), null, null, true, OrderSource.KILL_SWITCH, null);
     }
 
     /** No order can still fill and every position is zero (re-read). */

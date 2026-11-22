@@ -22,6 +22,6 @@ record PlaceOrderRequest(
 
     OrderIntent toIntent(String idempotencyKey) {
         return new OrderIntent(
-                idempotencyKey, symbol, side, type, size, limitPrice, timeInForce, Boolean.TRUE.equals(reduceOnly), OrderSource.MANUAL);
+                idempotencyKey, symbol, side, type, size, limitPrice, timeInForce, Boolean.TRUE.equals(reduceOnly), OrderSource.MANUAL, null);
     }
 }

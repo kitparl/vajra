@@ -28,13 +28,13 @@ public class OrderRepository {
     }
 
     /** Throws {@link org.springframework.dao.DuplicateKeyException} when {@code client_order_id} already exists. */
-    public void insert(Order o, String requestHash) {
+    public void insert(Order o, String requestHash, UUID signalId) {
         jdbc.sql("insert into orders (id, client_order_id, idempotency_key, request_hash, venue, instrument_id, side, "
                         + "type, size, limit_price, time_in_force, reduce_only, state, filled_size, avg_fill_price, "
-                        + "fees, venue_order_id, source, reason, created_at, updated_at, version) values "
+                        + "fees, venue_order_id, source, reason, created_at, updated_at, version, signal_id) values "
                         + "(:id, :clientOrderId, :idempotencyKey, :requestHash, :venue, :instrumentId, :side, :type, "
                         + ":size, :limitPrice, :timeInForce, :reduceOnly, :state, :filledSize, :avgFillPrice, :fees, "
-                        + ":venueOrderId, :source, :reason, :createdAt, :updatedAt, :version)")
+                        + ":venueOrderId, :source, :reason, :createdAt, :updatedAt, :version, :signalId)")
                 .param("id", o.id())
                 .param("clientOrderId", o.clientOrderId())
                 .param("idempotencyKey", o.idempotencyKey())
@@ -57,6 +57,7 @@ public class OrderRepository {
                 .param("createdAt", utc(o.createdAt()))
                 .param("updatedAt", utc(o.updatedAt()))
                 .param("version", o.version())
+                .param("signalId", signalId)
                 .update();
     }
 
@@ -114,6 +115,13 @@ public class OrderRepository {
         return jdbc.sql("select risk_decision_id from orders where id = :id")
                 .param("id", orderId)
                 .query((rs, row) -> rs.getObject("risk_decision_id", UUID.class))
+                .optional();
+    }
+
+    public Optional<UUID> signalId(UUID orderId) {
+        return jdbc.sql("select signal_id from orders where id = :id")
+                .param("id", orderId)
+                .query((rs, row) -> rs.getObject("signal_id", UUID.class))
                 .optional();
     }
 

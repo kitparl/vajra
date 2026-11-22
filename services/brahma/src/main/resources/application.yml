@@ -4,6 +4,31 @@ spring:
   threads:
     virtual:
       enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+        max.block.ms: 5000
+    consumer:
+      group-id: core-service
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      max-poll-records: 50
+      properties:
+        # Small fetches: core-service has a 384 MiB limit and signals are tiny and rare.
+        max.partition.fetch.bytes: 262144
+        fetch.max.bytes: 1048576
+    listener:
+      ack-mode: manual
+      concurrency: 1
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
@@ -25,6 +50,12 @@ management:
         include: health
 
 vajra:
+  signals:
+    # false stops the signal.generated consumer from starting (tests, or a deliberate pause).
+    enabled: ${SIGNALS_ENABLED:true}
+  outbox:
+    batch-size: 100
+    interval: 1s
   marketdata:
     # Symbols that get quotes, candles and (later) trading. Others are stored in the instrument master only.
     symbols: BTCUSD,ETHUSD

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from signal_service.main import create_app
+from signal_service.settings import HeartbeatSettings
 from sqlalchemy import text
 from testcontainers.community.postgres import PostgresContainer
 from vajra_common.db import create_engine_from
@@ -10,10 +11,11 @@ from vajra_common.migrations import run_migrations
 from vajra_common.settings import DatabaseSettings
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
+NO_HEARTBEAT = HeartbeatSettings(kafka_bootstrap="unused:9092", heartbeat_enabled=False)
 
 
 def test_health_up(settings: DatabaseSettings) -> None:
-    with TestClient(create_app(settings)) as client:
+    with TestClient(create_app(settings, NO_HEARTBEAT)) as client:
         response = client.get("/health")
 
     assert response.status_code == 200
@@ -39,7 +41,7 @@ def test_health_down_when_db_stops(
     settings_for: Callable[[PostgresContainer], DatabaseSettings],
 ) -> None:
     container = start_postgres()  # own container, because this test stops it
-    app = create_app(settings_for(container))
+    app = create_app(settings_for(container), NO_HEARTBEAT)
     container.stop()
 
     with TestClient(app) as client:
@@ -47,3 +49,12 @@ def test_health_down_when_db_stops(
 
     assert response.status_code == 503
     assert response.json() == {"status": "DOWN"}
+
+
+def test_app_starts_with_kafka_unreachable(settings: DatabaseSettings) -> None:
+    unreachable = HeartbeatSettings(kafka_bootstrap="localhost:1", heartbeat_enabled=True)
+
+    with TestClient(create_app(settings, unreachable)) as client:
+        response = client.get("/health")
+
+    assert response.status_code == 200

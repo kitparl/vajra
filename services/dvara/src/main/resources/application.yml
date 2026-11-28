@@ -1,6 +1,16 @@
 spring:
   application:
     name: gateway-bff
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: gateway-bff
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+    listener:
+      # Kafka down or topics missing must never stop the gateway from starting; the consumer keeps retrying.
+      missing-topics-fatal: false
   threads:
     virtual:
       enabled: true
@@ -33,7 +43,15 @@ management:
         include: health
 
 vajra:
-  trading-mode: ${TRADING_MODE:PAPER}
+  upstream:
+    core-base-url: ${CORE_BASE_URL:http://localhost:8081}
+    risk-base-url: ${RISK_BASE_URL:http://localhost:8082}
+    risk-api-token: ${RISK_API_TOKEN:}
+    timeout: PT3S
+  live:
+    ui-origin: ${GATEWAY_UI_ORIGIN:}
+    quote-interval: PT1S
+    risk-interval: PT2S
   auth:
     username: ${GATEWAY_ADMIN_USERNAME:}
     password-hash: ${GATEWAY_ADMIN_PASSWORD_HASH:}

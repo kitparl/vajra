@@ -1,5 +1,7 @@
 package com.vajra.riskservice.risk;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -26,6 +28,15 @@ public class RiskLimitRepository {
                 require(values, "max_abs_position"),
                 require(values, "max_orders_per_minute"));
     }
+
+    public List<RiskLimitRow> listAll() {
+        return jdbc.sql("select name, value, updated_at from risk_limit order by name")
+                .query((rs, n) -> new RiskLimitRow(
+                        rs.getString("name"), rs.getLong("value"), rs.getTimestamp("updated_at").toInstant()))
+                .list();
+    }
+
+    public record RiskLimitRow(String name, long value, Instant updatedAt) {}
 
     private static long require(Map<String, Long> values, String name) {
         Long value = values.get(name);

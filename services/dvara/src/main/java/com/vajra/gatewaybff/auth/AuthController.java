@@ -1,5 +1,6 @@
 package com.vajra.gatewaybff.auth;
 
+import com.vajra.gatewaybff.upstream.CoreClient;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -10,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,20 +44,20 @@ class AuthController {
     private final CsrfTokenRepository csrfTokenRepository;
     private final LoginLockout lockout;
     private final AuditEventRepository audit;
-    private final String tradingMode;
+    private final CoreClient core;
 
     AuthController(
             AuthenticationManager authenticationManager, SessionAuthenticationStrategy sessionStrategy,
             SecurityContextRepository contextRepository, CsrfTokenRepository csrfTokenRepository,
             LoginLockout lockout, AuditEventRepository audit,
-            @Value("${vajra.trading-mode}") String tradingMode) {
+            CoreClient core) {
         this.authenticationManager = authenticationManager;
         this.sessionStrategy = sessionStrategy;
         this.contextRepository = contextRepository;
         this.csrfTokenRepository = csrfTokenRepository;
         this.lockout = lockout;
         this.audit = audit;
-        this.tradingMode = tradingMode;
+        this.core = core;
     }
 
     /** Resolving the deferred token is what makes Spring Security write the XSRF-TOKEN cookie. */
@@ -147,7 +147,7 @@ class AuthController {
 
     @GetMapping("/api/v1/session")
     Map<String, String> session(Authentication authentication) {
-        return Map.of("username", authentication.getName(), "tradingMode", tradingMode);
+        return Map.of("username", authentication.getName(), "tradingMode", core.tradingMode());
     }
 
     record LoginRequest(

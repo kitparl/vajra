@@ -6,7 +6,6 @@ import com.vajra.coreservice.instrument.Instrument;
 import com.vajra.coreservice.instrument.InstrumentRepository;
 import com.vajra.coreservice.marketdata.QuoteCache;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -15,8 +14,6 @@ import org.springframework.stereotype.Service;
 /** Positions with unrealized PnL from the quote cache, and PnL totals. Paper positions use testnet instruments. */
 @Service
 public class PositionService {
-
-    private static final Duration MAX_QUOTE_AGE = Duration.ofSeconds(10);
 
     private final PositionRepository positions;
     private final InstrumentRepository instruments;
@@ -54,7 +51,7 @@ public class PositionService {
     }
 
     private Optional<BigDecimal> markPrice(Position p) {
-        return quotes.fresh(p.symbol(), MAX_QUOTE_AGE).map(Quote::markPrice);
+        return quotes.fresh(p.symbol(), QuoteCache.MAX_AGE).map(Quote::markPrice);
     }
 
     private Optional<BigDecimal> contractValue(Position p) {

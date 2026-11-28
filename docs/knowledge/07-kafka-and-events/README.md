@@ -9,6 +9,7 @@
 | `02-contracts-aur-envelope.md` | Contract kya hai, EventEnvelope, buf breaking check |
 | `03-heartbeat-signal-ka-safar.md` | Signal se order tak ka safar, outbox, manual ack, idempotency key |
 | `04-purana-signal-mat-bhejo.md` | Outbox me signal ki umar, Kafka volume wali galti, kya seekha |
+| `05-gateway-bhi-sunta-hai.md` | Gateway Kafka consumer, sirf padhna, offset replay, Kafka band ho tab bhi start |
 
 ## Ek line me saar
 Kafka = services ke beech **message ka dak-khana**. Kuch hua to event bhej do, jise chahiye wo sun le.

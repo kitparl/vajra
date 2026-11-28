@@ -5,3 +5,7 @@ vajra:
     username: admin
     password-hash: "$2y$04$LhgEFG63PDT321KDKrfynOFAq8z2/AwnGq47BZqNq/B9tNqVaboY6"
     cookie-secure: false
+  upstream:
+    risk-api-token: test-risk-token
+  live:
+    ui-origin: http://ui.test

@@ -1,4 +1,8 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { LiveService } from '../data/live.service';
+import { OrdersComponent } from '../orders/orders.component';
+import { PositionsComponent } from '../positions/positions.component';
+import { WatchlistComponent } from '../watchlist/watchlist.component';
 import { TopBarComponent } from './top-bar.component';
 
 const PANELS = ['Watchlist', 'Chart', 'Orders', 'Positions'] as const;
@@ -6,7 +10,7 @@ type Panel = (typeof PANELS)[number];
 
 @Component({
   selector: 'app-shell',
-  imports: [TopBarComponent],
+  imports: [TopBarComponent, WatchlistComponent, OrdersComponent, PositionsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-top-bar />
@@ -19,7 +23,12 @@ type Panel = (typeof PANELS)[number];
       @for (p of panels; track p) {
         <section [class]="'panel ' + p.toLowerCase()" [class.active]="active() === p" [attr.aria-label]="p">
           <h2>{{ p }}</h2>
-          <p class="muted">Coming soon</p>
+          @switch (p) {
+            @case ('Watchlist') { <app-watchlist /> }
+            @case ('Orders') { <app-orders /> }
+            @case ('Positions') { <app-positions /> }
+            @default { <p class="muted">Coming soon</p> }
+          }
         </section>
       }
     </main>
@@ -31,7 +40,7 @@ type Panel = (typeof PANELS)[number];
       border-bottom: 2px solid transparent; cursor: pointer; }
     .tabs button[aria-pressed='true'] { border-bottom-color: var(--accent); font-weight: 700; }
     .grid { flex: 1; padding: var(--space-3); }
-    .panel { display: none; background: var(--surface); border: 1px solid var(--border);
+    .panel { display: none; min-width: 0; overflow: auto; background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); padding: var(--space-3); }
     .panel.active { display: block; }
     h2 { margin: 0 0 var(--space-2); font-size: 14px; }
@@ -51,4 +60,10 @@ type Panel = (typeof PANELS)[number];
 export class ShellComponent {
   protected readonly panels = PANELS;
   protected readonly active = signal<Panel>('Watchlist');
+
+  constructor() {
+    const live = inject(LiveService);
+    live.connect();
+    inject(DestroyRef).onDestroy(() => live.disconnect());
+  }
 }

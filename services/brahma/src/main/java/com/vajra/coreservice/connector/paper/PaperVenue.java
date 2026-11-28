@@ -12,7 +12,6 @@ import com.vajra.coreservice.oms.Side;
 import com.vajra.coreservice.oms.TimeInForce;
 import com.vajra.coreservice.position.PositionMath;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaperVenue implements TradingVenue {
 
-    static final Duration MAX_QUOTE_AGE = Duration.ofSeconds(10);
     private static final String TAKER = "TAKER";
     private static final String MAKER = "MAKER";
 
@@ -63,7 +61,7 @@ public class PaperVenue implements TradingVenue {
     }
 
     private Optional<Quote> freshQuote(String symbol) {
-        return quotes.fresh(symbol, MAX_QUOTE_AGE).filter(q -> isPositive(q.bestBid()) && isPositive(q.bestAsk()));
+        return quotes.fresh(symbol, QuoteCache.MAX_AGE).filter(q -> isPositive(q.bestBid()) && isPositive(q.bestAsk()));
     }
 
     private static boolean isPositive(BigDecimal price) {

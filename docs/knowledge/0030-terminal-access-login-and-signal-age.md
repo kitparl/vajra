@@ -72,7 +72,7 @@ status: current
    ```
 5. **Phone and laptop:** install the Tailscale app, log in with the same account, then open `https://<vps-name>.<tailnet>.ts.net`.
 6. **Check that nothing is public:** `sudo ss -tlnp` must show only `sshd` on a public address. 8088 must be on `127.0.0.1`, and Tailscale listens on its 100.x address.
-7. **Switching TRADING_MODE:** recreate **gateway-bff together with core-service**, because the badge reads gateway-bff's own `TRADING_MODE`.
+7. **Switching TRADING_MODE:** recreate **gateway-bff together with core-service**, because the badge reads gateway-bff's own `TRADING_MODE`. Superseded by: 0031 (the badge now reads core's mode; recreating core-service is enough)
 
 ## Demo (laptop, 2026-11-28)
 - **Through Nginx on :8088.**
@@ -88,7 +88,7 @@ status: current
 ## Known limits and follow-ups
 - **Idle timeout:** an open tab polls every 15 s, so the session stays alive until the 8 h absolute limit. "Idle" in practice means no tab is open.
 - **Lockout:** it is global, so any device on the tailnet could lock the user out for 15 min. Only Pranshu's devices are on the tailnet.
-- **Mode badge:** it shows the gateway's mode. Slice 2 should take the mode from core.
+- **Mode badge:** it shows the gateway's mode. Slice 2 should take the mode from core. Superseded by: 0031
 - **Minor:**
   - The login lock has no wait timeout.
   - `/ws` must become `^~ /ws/` if sub-paths appear.

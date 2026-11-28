@@ -134,7 +134,12 @@ services:
       GATEWAY_ADMIN_USERNAME: ${GATEWAY_ADMIN_USERNAME}
       GATEWAY_ADMIN_PASSWORD_HASH: ${GATEWAY_ADMIN_PASSWORD_HASH}
       GATEWAY_COOKIE_SECURE: ${GATEWAY_COOKIE_SECURE:-true}
-      TRADING_MODE: ${TRADING_MODE:-PAPER}
+      CORE_BASE_URL: http://core-service:8081
+      RISK_BASE_URL: http://risk-service:8082
+      RISK_API_TOKEN: ${RISK_API_TOKEN}
+      KAFKA_BOOTSTRAP: kafka:9092
+      GATEWAY_UI_ORIGIN: ${GATEWAY_UI_ORIGIN:-http://localhost:8088}
+    # No kafka dependency: the gateway must start (and serve REST) while Kafka is down; the consumer keeps retrying.
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 384m
     restart: unless-stopped

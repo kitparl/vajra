@@ -41,6 +41,7 @@ High-level design, service responsibilities, important flows, strategies, concep
 | 0028 | SMA-cross strategy, shared decision code and the backtester (Phase 4) | decision |
 | 0029 | Incident: Kafka lost its topics and old heartbeat signals became paper orders | learning |
 | 0030 | Terminal access over Tailscale, gateway login and consumer-side signal age (Phase 5 slices 0 and 1) | decision |
+| 0031 | Read screens and the live stream: gateway reads, WebSocket, Kafka fan-out (Phase 5 slice 2) | decision |
 
 ## Hinglish topic notes (beginner friendly)
 Numbered files above are the formal design record. The **topic folders** below explain the same ideas in simple Hinglish so that everyone can understand easily. Read them in this order if you are new.

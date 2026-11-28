@@ -46,6 +46,7 @@ class AuthApiIT {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         TestDatabase.registerAsServiceRole(POSTGRES, registry);
+        registry.add("vajra.upstream.core-base-url", () -> "http://localhost:1");
     }
 
     @Value("${local.server.port}")
@@ -94,7 +95,7 @@ class AuthApiIT {
 
         HttpResponse<String> session = client.get("/api/v1/session");
         assertThat(session.statusCode()).isEqualTo(200);
-        assertThat(session.body()).contains("\"username\":\"admin\"").contains("\"tradingMode\":\"PAPER\"");
+        assertThat(session.body()).contains("\"username\":\"admin\"").contains("\"tradingMode\":\"UNKNOWN\"");
         assertThat(auditKinds()).containsExactly("LOGIN_OK");
     }
 

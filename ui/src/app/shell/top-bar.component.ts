@@ -1,9 +1,15 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
+import { ApiService, panelError } from '../data/api.service';
+import { PanelError } from '../data/models';
+import { LiveService } from '../data/live.service';
+import { createThrottle } from '../data/throttle';
 
 const POLL_MS = 15_000;
+const PNL_MIN_INTERVAL_MS = 2000;
 
 @Component({
   selector: 'app-top-bar',
@@ -15,8 +21,12 @@ const POLL_MS = 15_000;
       <span class="conn" [class.offline]="!auth.reachable()" role="status">
         <span class="dot" aria-hidden="true"></span>{{ auth.reachable() ? 'online' : 'offline' }}
       </span>
+      <span class="live">{{ live.status() }}</span>
+      @if (live.risk()?.halted) {
+        <span class="halted" role="status">HALTED</span>
+      }
       <span class="spacer"></span>
-      <span class="pnl" title="Global P&amp;L">P&amp;L —</span>
+      <span class="pnl" title="Global P&amp;L">P&amp;L {{ pnlNotice() ? pnlNotice() + ' unavailable' : (netPnl() ?? '—') }}</span>
       <button type="button" class="kill" aria-disabled="true" aria-describedby="kill-hint">Kill switch</button>
       <small id="kill-hint" class="hint">(slice 4)</small>
       <button type="button" class="theme" (click)="theme.toggle()"
@@ -41,6 +51,9 @@ const POLL_MS = 15_000;
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
     .conn.offline { color: var(--danger); }
     .conn.offline .dot { background: var(--danger); }
+    .live { color: var(--text-muted); font-size: 12px; }
+    .halted { padding: 2px var(--space-2); border: 2px solid var(--danger); border-radius: var(--radius);
+      color: var(--danger); font-weight: 700; letter-spacing: 0.04em; }
     .pnl { font-family: var(--font-mono); color: var(--text-muted); }
     button { padding: var(--space-1) var(--space-3); background: var(--surface-2); border: 1px solid var(--border);
       border-radius: var(--radius); cursor: pointer; }
@@ -51,12 +64,15 @@ const POLL_MS = 15_000;
 })
 export class TopBarComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly live = inject(LiveService);
+  private readonly api = inject(ApiService);
   protected readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
 
   protected readonly logoutError = signal(false);
   protected readonly mode = computed(() => {
-    const raw = this.auth.session()?.tradingMode;
+    // The session value is polled from core every 15 s; hello only fills the gap before the first one.
+    const raw = this.live.coreAvailable() ? (this.auth.session()?.tradingMode ?? this.live.tradingMode() ?? undefined) : 'UNKNOWN';
     if (raw === undefined) {
       return { kind: 'none', label: '—' };
     }
@@ -68,11 +84,34 @@ export class TopBarComponent {
     }
     return { kind: 'unknown', label: raw };
   });
+  protected readonly netPnl = signal<string | null>(null);
   private polling = false;
+  protected readonly pnlError = signal<PanelError | null>(null);
+  protected readonly pnlNotice = computed<PanelError | null>(() => this.pnlError() ?? (this.live.coreAvailable() ? null : 'core'));
+  private readonly requestPnl = createThrottle(() => void this.fetchPnl(), PNL_MIN_INTERVAL_MS, inject(DestroyRef));
 
   constructor() {
     const timer = setInterval(() => void this.poll(), POLL_MS);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => clearInterval(timer));
+    this.requestPnl();
+    destroyRef.onDestroy(this.live.onReconnect(() => this.requestPnl()));
+    this.live.messages$.pipe(takeUntilDestroyed()).subscribe((m) => {
+      if (m.type === 'position' || m.type === 'quote') {
+        this.requestPnl();
+      }
+    });
+  }
+
+  private async fetchPnl(): Promise<void> {
+    try {
+      this.netPnl.set((await this.api.pnl()).netPnl);
+      this.pnlError.set(null);
+    } catch (err) {
+      // The last value stays; a 401 is already redirected by ApiService.
+      const e = panelError(err);
+      this.pnlError.set(e === 'error' ? null : e);
+    }
   }
 
   private async poll(): Promise<void> {

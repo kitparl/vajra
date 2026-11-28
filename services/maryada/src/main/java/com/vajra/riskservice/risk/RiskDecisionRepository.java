@@ -2,6 +2,7 @@ package com.vajra.riskservice.risk;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -48,4 +49,35 @@ public class RiskDecisionRepository {
                 .query(Long.class)
                 .single();
     }
+
+    /** Newest rejected decisions first. */
+    public List<Rejection> recentRejections(int limit) {
+        return jdbc.sql("""
+                        select id, client_order_id, venue, symbol, side, size, order_type, reason, decided_at
+                        from risk_decision where not approved
+                        order by decided_at desc, id limit :limit""")
+                .param("limit", limit)
+                .query((rs, n) -> new Rejection(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("client_order_id"),
+                        rs.getString("venue"),
+                        rs.getString("symbol"),
+                        rs.getString("side"),
+                        (Long) rs.getObject("size"),
+                        rs.getString("order_type"),
+                        rs.getString("reason"),
+                        rs.getTimestamp("decided_at").toInstant()))
+                .list();
+    }
+
+    public record Rejection(
+            UUID decisionId,
+            String clientOrderId,
+            String venue,
+            String symbol,
+            String side,
+            Long size,
+            String orderType,
+            String reason,
+            Instant decidedAt) {}
 }

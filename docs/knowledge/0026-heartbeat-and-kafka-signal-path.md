@@ -58,7 +58,7 @@ Kafka grew from 329 MiB (0018) to 382 MiB (74% of its limit) now that topics are
 - The outbox publisher is single-instance only (no row locking for multiple publishers).
 - During a partial outage, signals can be sent out of order; they are de-duplicated by `signal_id`, but order of arrival is not guaranteed.
 - Stuck orders (see Poison-message policy) are only logged at ERROR; slice 5 reconciliation should pick them up. Superseded by: 0027
-- Stale signals: there is no maximum signal age, so after a long outage queued signals become MARKET orders at the current price (risk's 10/min cap limits the burst). Add a max age before Phase 4.
+- Stale signals: there is no maximum signal age, so after a long outage queued signals become MARKET orders at the current price (risk's 10/min cap limits the burst). Add a max age before Phase 4. Superseded by: 0029 (producer-side expiry done; consumer-side max age still open, see 0028)
 - The heartbeat alternates on the last generated signal, not the last filled one, so an odd number of rejected signals shifts the paper position (risk's 5-contract cap bounds it).
 - The outbox stops at a row it can never send (topic deleted, record too large) and only logs WARN every second. Escalate after N failures.
 - compose passes `TRADING_MODE` to signal-service but not to core-service. Wire it in slice 5. Superseded by: 0027

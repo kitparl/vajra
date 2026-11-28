@@ -51,6 +51,13 @@ class CandleRepositoryIT {
         assertThat(candles.lastOpenTime(btcId)).contains(at("10:01"));
     }
 
+    @Test
+    void firstOpenTimeReturnsEarliest() {
+        candles.upsertAll(btcId, List.of(candle("09:00", "100"), candle("09:30", "100")));
+
+        assertThat(candles.firstOpenTime(btcId)).contains(at("09:00"));
+    }
+
     private static Candle candle(String hhmm, String close) {
         BigDecimal c = new BigDecimal(close);
         return new Candle("BTCUSD", at(hhmm), c, c, c, c, BigDecimal.TEN);

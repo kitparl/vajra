@@ -9,6 +9,7 @@ from signal_service.signal_log import SignalRow
 
 TOPIC = "signal.generated"
 PRODUCER = "signal-service"
+REQUEST_TIMEOUT_MS = 10_000  # a blocked send must not eat the 4 min signal age budget (aiokafka has no max_block_ms)
 
 
 class SignalPublisher:
@@ -21,7 +22,9 @@ class SignalPublisher:
     async def _connected_producer(self) -> AIOKafkaProducer:
         """Connect lazily so the service starts with Kafka down; a failed connect is retried on the next publish."""
         if self._producer is None:
-            producer = AIOKafkaProducer(bootstrap_servers=self.bootstrap, acks="all")
+            producer = AIOKafkaProducer(
+                bootstrap_servers=self.bootstrap, acks="all", request_timeout_ms=REQUEST_TIMEOUT_MS
+            )
             try:
                 await producer.start()
             except BaseException:

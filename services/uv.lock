@@ -7,6 +7,7 @@ members = [
     "research-service",
     "signal-service",
     "vajra-common",
+    "vajra-strategies",
 ]
 
 [manifest.dependency-groups]
@@ -538,6 +539,7 @@ dependencies = [
     { name = "uvicorn" },
     { name = "vajra-common" },
     { name = "vajra-contracts" },
+    { name = "vajra-strategies" },
 ]
 
 [package.metadata]
@@ -545,6 +547,7 @@ requires-dist = [
     { name = "uvicorn", specifier = "==0.54.0" },
     { name = "vajra-common", editable = "common-py" },
     { name = "vajra-contracts", directory = "../contracts/python" },
+    { name = "vajra-strategies", editable = "strategies-py" },
 ]
 
 [[package]]
@@ -581,6 +584,7 @@ dependencies = [
     { name = "uvicorn" },
     { name = "vajra-common" },
     { name = "vajra-contracts" },
+    { name = "vajra-strategies" },
 ]
 
 [package.metadata]
@@ -589,6 +593,7 @@ requires-dist = [
     { name = "uvicorn", specifier = "==0.54.0" },
     { name = "vajra-common", editable = "common-py" },
     { name = "vajra-contracts", directory = "../contracts/python" },
+    { name = "vajra-strategies", editable = "strategies-py" },
 ]
 
 [[package]]
@@ -719,18 +724,22 @@ source = { editable = "common-py" }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi" },
+    { name = "httpx2" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
     { name = "sqlalchemy" },
+    { name = "vajra-strategies" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = "==1.20.1" },
     { name = "fastapi", specifier = "==0.165.0" },
+    { name = "httpx2", specifier = "==2.16.2" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.9" },
     { name = "pydantic-settings", specifier = "==2.16.3" },
     { name = "sqlalchemy", specifier = "==2.1.9" },
+    { name = "vajra-strategies", editable = "strategies-py" },
 ]
 
 [[package]]
@@ -743,6 +752,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "protobuf", specifier = "==7.36.2" }]
+
+[[package]]
+name = "vajra-strategies"
+version = "0.1.0"
+source = { editable = "strategies-py" }
 
 [[package]]
 name = "wrapt"

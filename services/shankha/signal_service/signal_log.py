@@ -14,6 +14,7 @@ class SignalRow:
     order_type: str
     size: int
     generated_at: datetime
+    candle_time: datetime | None = None
 
 
 class SignalLog:
@@ -29,19 +30,33 @@ class SignalLog:
 
     def insert(self, signal: SignalRow) -> None:
         sql = text(
-            "insert into signal.signal_log (signal_id, strategy, symbol, side, order_type, size, generated_at) "
-            "values (:signal_id, :strategy, :symbol, :side, :order_type, :size, :generated_at)"
+            "insert into signal.signal_log "
+            "(signal_id, strategy, symbol, side, order_type, size, generated_at, candle_time) "
+            "values (:signal_id, :strategy, :symbol, :side, :order_type, :size, :generated_at, :candle_time)"
         )
         with self._engine.begin() as conn:
             conn.execute(sql, vars(signal))
 
     def unpublished(self, limit: int) -> list[SignalRow]:
         sql = text(
-            "select signal_id, strategy, symbol, side, order_type, size, generated_at from signal.signal_log "
-            "where published_at is null order by generated_at limit :limit"
+            "select signal_id, strategy, symbol, side, order_type, size, generated_at, candle_time "
+            "from signal.signal_log "
+            "where published_at is null and expired_at is null order by generated_at limit :limit"
         )
         with self._engine.connect() as conn:
             return [SignalRow(*row) for row in conn.execute(sql, {"limit": limit})]
+
+    def has_signal_for_candle(self, strategy: str, symbol: str, candle_time: datetime) -> bool:
+        sql = text(
+            "select exists (select 1 from signal.signal_log where strategy = :s and symbol = :sym and candle_time = :t)"
+        )
+        with self._engine.connect() as conn:
+            return bool(conn.execute(sql, {"s": strategy, "sym": symbol, "t": candle_time}).scalar())
+
+    def mark_expired(self, signal_id: UUID, at: datetime) -> None:
+        sql = text("update signal.signal_log set expired_at = :at where signal_id = :id")
+        with self._engine.begin() as conn:
+            conn.execute(sql, {"at": at, "id": signal_id})
 
     def mark_published(self, signal_id: UUID, at: datetime) -> None:
         sql = text("update signal.signal_log set published_at = :at where signal_id = :id")

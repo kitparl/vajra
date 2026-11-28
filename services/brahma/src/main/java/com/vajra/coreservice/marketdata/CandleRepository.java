@@ -44,6 +44,14 @@ public class CandleRepository {
                 .map(OffsetDateTime::toInstant);
     }
 
+    public Optional<Instant> firstOpenTime(long instrumentId) {
+        return jdbc.sql("select min(open_time) from candle_1m where instrument_id = :id")
+                .param("id", instrumentId)
+                .query(OffsetDateTime.class)
+                .optional()
+                .map(OffsetDateTime::toInstant);
+    }
+
     /** Candles with {@code from <= open_time < to}, ascending. */
     public List<Candle> find(long instrumentId, String symbol, Instant from, Instant to) {
         return jdbc.sql("select open_time, open, high, low, close, volume from candle_1m "

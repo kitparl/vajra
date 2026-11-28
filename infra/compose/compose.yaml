@@ -53,6 +53,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # Without this the apache/kafka image writes to /tmp and topics are lost on container recreate.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_HEAP_OPTS: -Xmx320m -Xms320m
     volumes:
       - kafkadata:/var/lib/kafka/data
@@ -143,6 +145,11 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
       TRADING_MODE: ${TRADING_MODE:-PAPER}
       HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-900}
+      STRATEGY: ${STRATEGY:-sma_cross}
+      SMA_FAST: ${SMA_FAST:-20}
+      SMA_SLOW: ${SMA_SLOW:-60}
+      SMA_SYMBOL: ${SMA_SYMBOL:-BTCUSD}
+      CORE_BASE_URL: http://core-service:8081
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 256m
     restart: unless-stopped
@@ -156,6 +163,7 @@ services:
       DB_URL: postgresql+psycopg://postgres:5432/vajra
       DB_USER: research_svc
       DB_PASSWORD: ${RESEARCH_DB_PASSWORD}
+      CORE_BASE_URL: http://core-service:8081
     depends_on: { postgres: { condition: service_healthy } }
     restart: unless-stopped
     healthcheck: *python-health

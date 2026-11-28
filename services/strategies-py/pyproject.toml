@@ -1,0 +1,10 @@
+[project]
+name = "vajra-strategies"
+version = "0.1.0"
+description = "Pure strategy decision code shared by live signal-service and the research backtester. No I/O."
+requires-python = "==3.14.*"
+dependencies = []
+
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"

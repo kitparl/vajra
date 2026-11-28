@@ -15,6 +15,7 @@ COPY services/pyproject.toml services/uv.lock services/.python-version services/
 COPY services/common-py services/common-py
 COPY services/shankha services/shankha
 COPY services/manthan services/manthan
+COPY services/strategies-py services/strategies-py
 RUN --mount=type=cache,target=/root/.cache/uv \
     cd services && uv sync --frozen --no-dev --no-editable --package ${PACKAGE}
 RUN useradd --system app

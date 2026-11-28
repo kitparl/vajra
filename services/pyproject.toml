@@ -1,7 +1,7 @@
 # uv workspace for all Python services. Every Python dependency version is pinned here
 # or in a member's pyproject.toml, and locked once in services/uv.lock.
 [tool.uv.workspace]
-members = ["common-py", "shankha", "manthan"]
+members = ["common-py", "shankha", "manthan", "strategies-py"]
 
 [dependency-groups]
 dev = [
@@ -19,7 +19,7 @@ required-version = ">=0.9"
 vajra-contracts = { path = "../contracts/python" }
 
 [tool.pytest.ini_options]
-testpaths = ["../contracts/python/tests", "common-py/tests", "shankha/tests", "manthan/tests"]
+testpaths = ["../contracts/python/tests", "common-py/tests", "shankha/tests", "manthan/tests", "strategies-py/tests"]
 
 [tool.ruff]
 target-version = "py314"

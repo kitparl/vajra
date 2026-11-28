@@ -8,16 +8,32 @@ import com.vajra.coreservice.oms.OrderSource;
 import com.vajra.coreservice.oms.OrderType;
 import com.vajra.coreservice.oms.Side;
 import com.vajra.coreservice.oms.TimeInForce;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
-/** Turns a {@code signal.generated} envelope into an order intent. The key is derived from the signal id. */
+/**
+ * Turns a {@code signal.generated} envelope into an order intent. The key is derived from the signal id.
+ * {@code generated_at} must be present and not more than {@link #MAX_FUTURE_SKEW} ahead of the clock.
+ */
 @Component
 class SignalMapper {
 
     static final String KEY_PREFIX = "signal-";
+    static final Duration MAX_FUTURE_SKEW = Duration.ofSeconds(30);
 
-    OrderIntent toIntent(byte[] envelopeBytes) {
+    /** The order intent plus the time the signal was generated, for the staleness check. */
+    record MappedSignal(OrderIntent intent, Instant generatedAt) {}
+
+    private final Clock clock;
+
+    SignalMapper(Clock clock) {
+        this.clock = clock;
+    }
+
+    MappedSignal toSignal(byte[] envelopeBytes) {
         SignalGenerated signal = unpack(envelopeBytes);
         UUID signalId = parseUuid(signal.getSignalId());
         if (signal.getSize() < 1) {
@@ -26,8 +42,21 @@ class SignalMapper {
         if (!OrderType.MARKET.name().equals(signal.getOrderType())) {
             throw new InvalidSignalException("unsupported order_type: " + signal.getOrderType());
         }
-        return new OrderIntent(KEY_PREFIX + signalId, signal.getSymbol(), parseSide(signal.getSide()), OrderType.MARKET,
-                signal.getSize(), null, TimeInForce.IOC, false, OrderSource.SIGNAL, signalId);
+        Instant generatedAt = parseGeneratedAt(signal);
+        OrderIntent intent = new OrderIntent(KEY_PREFIX + signalId, signal.getSymbol(), parseSide(signal.getSide()),
+                OrderType.MARKET, signal.getSize(), null, TimeInForce.IOC, false, OrderSource.SIGNAL, signalId);
+        return new MappedSignal(intent, generatedAt);
+    }
+
+    private Instant parseGeneratedAt(SignalGenerated signal) {
+        if (!signal.hasGeneratedAt()) {
+            throw new InvalidSignalException("generated_at is missing");
+        }
+        Instant generatedAt = Instant.ofEpochSecond(signal.getGeneratedAt().getSeconds(), signal.getGeneratedAt().getNanos());
+        if (generatedAt.isAfter(clock.instant().plus(MAX_FUTURE_SKEW))) {
+            throw new InvalidSignalException("generated_at is in the future: " + generatedAt);
+        }
+        return generatedAt;
     }
 
     /** The signal id for log lines, or {@code "unknown"} when the message cannot be read. */

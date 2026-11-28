@@ -4,6 +4,8 @@ import com.vajra.coreservice.api.ApiException;
 import com.vajra.coreservice.oms.Order;
 import com.vajra.coreservice.oms.OrderService;
 import com.vajra.coreservice.oms.PlaceOrderResult;
+import java.time.Clock;
+import java.time.Duration;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,17 +28,33 @@ class SignalListener {
 
     private final SignalMapper mapper;
     private final OrderService orders;
+    private final SignalProperties properties;
+    private final Clock clock;
 
-    SignalListener(SignalMapper mapper, OrderService orders) {
+    SignalListener(SignalMapper mapper, OrderService orders, SignalProperties properties, Clock clock) {
         this.mapper = mapper;
         this.orders = orders;
+        this.properties = properties;
+        this.clock = clock;
     }
 
     @KafkaListener(topics = TOPIC, autoStartup = "${vajra.signals.enabled:true}")
     void onMessage(ConsumerRecord<String, byte[]> record, Acknowledgment ack) {
         try {
-            PlaceOrderResult result = orders.place(mapper.toIntent(record.value()));
-            logPlaced(record, result);
+            SignalMapper.MappedSignal signal = mapper.toSignal(record.value());
+            Duration age = Duration.between(signal.generatedAt(), clock.instant());
+            if (age.compareTo(properties.maxAge()) > 0) {
+                // Recorded for audit but never traded: e.g. it sat in Kafka while this service was down.
+                PlaceOrderResult result = orders.rejectWithoutRisk(signal.intent(), OrderService.STALE_SIGNAL);
+                if (result.created()) {
+                    log.warn("Stale signal {} rejected: age {} exceeds max {} (offset {})", signal.intent().signalId(),
+                            age, properties.maxAge(), record.offset());
+                } else {
+                    logPlaced(record, result);
+                }
+            } else {
+                logPlaced(record, orders.place(signal.intent()));
+            }
         } catch (InvalidSignalException e) {
             skip(record, e.getMessage());
         } catch (ApiException e) {

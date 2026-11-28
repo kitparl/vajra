@@ -3,6 +3,7 @@ package com.vajra.coreservice.signal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,6 +21,8 @@ import com.vajra.coreservice.oms.PlaceOrderResult;
 import com.vajra.coreservice.oms.Side;
 import com.vajra.coreservice.oms.TimeInForce;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,9 +35,12 @@ import org.springframework.kafka.support.Acknowledgment;
 @ExtendWith(OutputCaptureExtension.class)
 class SignalListenerTest {
 
+    private static final Clock CLOCK = SignalMapperTest.CLOCK;
+
     private final OrderService orders = mock(OrderService.class);
     private final Acknowledgment ack = mock(Acknowledgment.class);
-    private final SignalListener listener = new SignalListener(new SignalMapper(), orders);
+    private final SignalListener listener = new SignalListener(new SignalMapper(CLOCK), orders,
+            new SignalProperties(Duration.ofMinutes(5)), CLOCK);
 
     @Test
     void retryableConflictIsNotAcknowledged() {
@@ -86,6 +92,54 @@ class SignalListenerTest {
         assertThat(output.getAll()).doesNotContain("ERROR").doesNotContain("stuck");
     }
 
+    @Test
+    void signalOlderThanMaxAgeIsRejectedWithoutPlacingAndLoggedAtWarn(CapturedOutput output) {
+        Order rejected = order(OrderState.RISK_REJECTED);
+        when(orders.rejectWithoutRisk(any(OrderIntent.class), eq(OrderService.STALE_SIGNAL)))
+                .thenReturn(new PlaceOrderResult(rejected, true));
+
+        listener.onMessage(record(CLOCK.instant().minus(Duration.ofMinutes(6))), ack);
+
+        verify(orders, never()).place(any(OrderIntent.class));
+        verify(ack).acknowledge();
+        assertThat(output.getAll()).contains("WARN").contains("Stale signal " + SIGNAL_ID).contains("age PT6M");
+    }
+
+    @Test
+    void staleRedeliveryOfFilledOrderLogsAlreadyPlaced(CapturedOutput output) {
+        stubStaleResult(new PlaceOrderResult(order(OrderState.FILLED), false));
+
+        listener.onMessage(record(CLOCK.instant().minus(Duration.ofMinutes(6))), ack);
+
+        verify(ack).acknowledge();
+        assertThat(output.getAll()).contains("already placed").doesNotContain("Stale signal");
+    }
+
+    @Test
+    void staleRedeliveryOfStuckNewOrderLogsError(CapturedOutput output) {
+        stubStaleResult(new PlaceOrderResult(order(OrderState.NEW), false));
+
+        listener.onMessage(record(CLOCK.instant().minus(Duration.ofMinutes(6))), ack);
+
+        verify(ack).acknowledge();
+        assertThat(output.getAll()).contains("ERROR").contains("stuck in NEW").doesNotContain("Stale signal");
+    }
+
+    private void stubStaleResult(PlaceOrderResult result) {
+        when(orders.rejectWithoutRisk(any(OrderIntent.class), eq(OrderService.STALE_SIGNAL))).thenReturn(result);
+    }
+
+    @Test
+    void signalExactlyAtMaxAgeIsPlaced() {
+        when(orders.place(any(OrderIntent.class))).thenReturn(new PlaceOrderResult(order(OrderState.FILLED), true));
+
+        listener.onMessage(record(CLOCK.instant().minus(Duration.ofMinutes(5))), ack);
+
+        verify(orders).place(any(OrderIntent.class));
+        verify(orders, never()).rejectWithoutRisk(any(OrderIntent.class), any());
+        verify(ack).acknowledge();
+    }
+
     private static final String SIGNAL_ID = UUID.randomUUID().toString();
 
     private static Order order(OrderState state) {
@@ -96,8 +150,12 @@ class SignalListenerTest {
     }
 
     private static ConsumerRecord<String, byte[]> record() {
+        return record(CLOCK.instant());
+    }
+
+    private static ConsumerRecord<String, byte[]> record(Instant generatedAt) {
         byte[] value = SignalMapperTest.envelope(
-                SignalMapperTest.signal(SIGNAL_ID, "BTCUSD", "BUY", "MARKET", 1));
+                SignalMapperTest.signal(SIGNAL_ID, "BTCUSD", "BUY", "MARKET", 1, generatedAt));
         return new ConsumerRecord<>("signal.generated", 0, 7L, "BTCUSD", value);
     }
 }

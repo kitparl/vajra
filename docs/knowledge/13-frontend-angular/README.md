@@ -6,6 +6,7 @@
 | File | Topic |
 |---|---|
 | `01-terminal-ui-basics.md` | UI kya dikhata hai, Angular basics, UI sirf gateway se kyun baat karta hai |
+| `02-login-aur-shell.md` | Login, CSRF parchi, lockout, top bar, phone layout, CSP ka sabak |
 
 ## Ek line me saar
 UI sirf **screen** hai. Asli logic backend me, UI sirf dikhata aur request bhejta hai.

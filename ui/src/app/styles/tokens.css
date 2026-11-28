@@ -1,0 +1,45 @@
+/* Design tokens: dark is the default, light overrides the same names. */
+:root {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --surface: #161b22;
+  --surface-2: #1f2630;
+  --border: #2d3642;
+  --text: #e6e9ee;
+  --text-muted: #9aa5b4;
+  --accent: #5b9dff;
+  --accent-contrast: #0b1220;
+  --neutral-badge: #2d3642;
+  --amber: #f0b429;
+  --amber-contrast: #1c1400;
+  --danger: #ff6b6b;
+  --danger-contrast: #1c0606;
+  --ok: #3ecf8e;
+  --focus: #8ab8ff;
+  --radius: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eceff4;
+  --border: #cfd6df;
+  --text: #16202c;
+  --text-muted: #566272;
+  --accent: #1f5fd1;
+  --accent-contrast: #ffffff;
+  --neutral-badge: #dfe4ec;
+  --amber: #8f5200;
+  --amber-contrast: #ffffff;
+  --danger: #c62828;
+  --danger-contrast: #ffffff;
+  --ok: #1b7f4f;
+  --focus: #1f5fd1;
+}

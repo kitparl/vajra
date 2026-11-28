@@ -1,0 +1,7 @@
+# Test-only defaults (merged with the main application.yml): the gateway refuses to start without a login hash.
+# Hash = bcrypt cost 4 of "correct-horse".
+vajra:
+  auth:
+    username: admin
+    password-hash: "$2y$04$LhgEFG63PDT321KDKrfynOFAq8z2/AwnGq47BZqNq/B9tNqVaboY6"
+    cookie-secure: false

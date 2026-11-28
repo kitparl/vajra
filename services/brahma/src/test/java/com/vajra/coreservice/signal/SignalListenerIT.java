@@ -105,6 +105,9 @@ class SignalListenerIT {
     Clock clock;
 
     @Autowired
+    ApprovingRiskGate riskGate;
+
+    @Autowired
     TradingStateRepository tradingState;
 
     @BeforeAll
@@ -120,6 +123,7 @@ class SignalListenerIT {
 
     @BeforeEach
     void reset() {
+        riskGate.reset();
         for (String table : List.of("audit_event", "fill", "order_transition", "orders", "position")) {
             jdbc.sql("delete from " + table).update();
         }
@@ -145,6 +149,54 @@ class SignalListenerIT {
         var details = orders.details(order.id()).orElseThrow();
         assertThat(details.signalId()).isEqualTo(signalId);
         assertThat(details.riskDecisionId()).isNotNull();
+    }
+
+    @Test
+    void freshSignalIsPlaced() {
+        send(SignalMapperTest.envelope(SignalMapperTest.signal(UUID.randomUUID().toString(), "BTCUSD", "BUY", "MARKET", 1,
+                clock.instant().minus(Duration.ofMinutes(1)))));
+
+        awaitCommitted();
+        assertThat(onlyOrder().state()).isEqualTo(OrderState.FILLED);
+    }
+
+    @Test
+    void staleSignalBecomesRejectedOrder() {
+        UUID signalId = UUID.randomUUID();
+
+        send(staleEnvelope(signalId));
+
+        awaitCommitted();
+        assertStaleRejected(signalId);
+    }
+
+    @Test
+    void staleSignalRedeliveryIsIdempotent() {
+        UUID signalId = UUID.randomUUID();
+
+        send(staleEnvelope(signalId));
+        send(staleEnvelope(signalId));
+
+        awaitCommitted();
+        assertStaleRejected(signalId);
+    }
+
+    private byte[] staleEnvelope(UUID signalId) {
+        return SignalMapperTest.envelope(SignalMapperTest.signal(signalId.toString(), "BTCUSD", "BUY", "MARKET", 1,
+                clock.instant().minus(Duration.ofMinutes(6))));
+    }
+
+    private void assertStaleRejected(UUID signalId) {
+        Order order = onlyOrder();
+        assertThat(order.state()).isEqualTo(OrderState.RISK_REJECTED);
+        assertThat(order.reason()).isEqualTo("STALE_SIGNAL");
+        assertThat(order.source()).isEqualTo(OrderSource.SIGNAL);
+        var details = orders.details(order.id()).orElseThrow();
+        assertThat(details.signalId()).isEqualTo(signalId);
+        assertThat(details.riskDecisionId()).isNull();
+        assertThat(details.fills()).isEmpty();
+        assertThat(details.transitions()).hasSize(2);
+        assertThat(riskGate.calls()).isZero();
     }
 
     @Test

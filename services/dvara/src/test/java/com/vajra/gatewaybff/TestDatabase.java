@@ -9,16 +9,16 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 /** Postgres 18 with the real init script; the service connects as its own role. */
-final class TestDatabase {
+public final class TestDatabase {
 
-    static final String SCHEMA = "gateway";
-    static final String ROLE = SCHEMA + "_svc";
+    public static final String SCHEMA = "gateway";
+    public static final String ROLE = SCHEMA + "_svc";
     private static final String ROLE_PASSWORD = "test-pw";
     private static final Path REPO_ROOT = Path.of("../..").toAbsolutePath().normalize();
 
     private TestDatabase() {}
 
-    static PostgreSQLContainer create() {
+    public static PostgreSQLContainer create() {
         PostgreSQLContainer container = new PostgreSQLContainer(DockerImageName.parse(postgresImage())
                         .asCompatibleSubstituteFor("postgres"))
                 .withDatabaseName("vajra")
@@ -31,7 +31,7 @@ final class TestDatabase {
         return container;
     }
 
-    static void registerAsServiceRole(PostgreSQLContainer container, DynamicPropertyRegistry registry) {
+    public static void registerAsServiceRole(PostgreSQLContainer container, DynamicPropertyRegistry registry) {
         registry.add("DB_URL", container::getJdbcUrl);
         registry.add("DB_USER", () -> ROLE);
         registry.add("DB_PASSWORD", () -> ROLE_PASSWORD);

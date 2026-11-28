@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-EXPECTED=(postgres kafka redis core-service risk-service gateway-bff signal-service)
+EXPECTED=(postgres kafka redis core-service risk-service gateway-bff signal-service ui)
 THRESHOLD_PERCENT=90
 WAIT_SECONDS=180
 

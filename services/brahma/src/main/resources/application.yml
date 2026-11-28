@@ -53,6 +53,8 @@ vajra:
   signals:
     # false stops the signal.generated consumer from starting (tests, or a deliberate pause).
     enabled: ${SIGNALS_ENABLED:true}
+    # A signal older than this is recorded as a rejected order (STALE_SIGNAL) and never traded.
+    max-age: PT5M
   outbox:
     batch-size: 100
     interval: 1s

@@ -17,9 +17,24 @@ spring:
 
 server:
   port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        name: VAJRA_SESSION
+        http-only: true
+        same-site: strict
+        secure: ${vajra.auth.cookie-secure}
 
 management:
   endpoints:
     web:
       exposure:
         include: health
+
+vajra:
+  trading-mode: ${TRADING_MODE:PAPER}
+  auth:
+    username: ${GATEWAY_ADMIN_USERNAME:}
+    password-hash: ${GATEWAY_ADMIN_PASSWORD_HASH:}
+    cookie-secure: ${GATEWAY_COOKIE_SECURE:true}

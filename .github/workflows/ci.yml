@@ -64,6 +64,15 @@ jobs:
         working-directory: services
         run: uv run --frozen pytest -q
 
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install, test and build
+        run: |
+          docker run --rm -v "$PWD/ui":/w -w /w node:26.13.1-alpine \
+            sh -c 'npm ci && npm test -- --watch=false && npm run build && node scripts/check-no-inline-script.mjs'
+
   infra:
     runs-on: ubuntu-latest
     steps:
@@ -72,6 +81,8 @@ jobs:
         run: cp infra/compose/.env.example infra/compose/.env
       - name: Validate compose files
         run: scripts/compose.sh config -q
+      - name: Only ui publishes a port
+        run: scripts/check-compose-ports.sh
       - name: Start Postgres
         run: scripts/compose.sh up -d --wait postgres
       - name: Role isolation test

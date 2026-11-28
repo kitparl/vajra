@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,7 @@ public class OrderService {
     static final String FILL_NOT_RECORDED = "FILL_NOT_RECORDED";
     static final String STUCK_NOT_SENT = "STUCK_NOT_SENT";
     static final String STUCK_SENT = "STUCK_SENT";
+    public static final String STALE_SIGNAL = "STALE_SIGNAL";
     static final String RECONCILED = "RECONCILED";
     private static final int LIST_LIMIT = 100;
 
@@ -80,6 +82,20 @@ public class OrderService {
 
     /** Places an order once per idempotency key; a replay with the same body returns the stored order. */
     public PlaceOrderResult place(OrderIntent raw) {
+        return createOnce(raw, this::process);
+    }
+
+    /**
+     * Records an order that must not trade: created idempotently like {@link #place}, then NEW to RISK_REJECTED with
+     * the reason and no risk decision (as in {@link #closeStuckNotSent}). Risk and the venue are never called.
+     */
+    public PlaceOrderResult rejectWithoutRisk(OrderIntent raw, String reason) {
+        return createOnce(raw,
+                (order, instrument) -> inTx(() -> lifecycle.riskDecided(order, OrderState.RISK_REJECTED, reason, null)));
+    }
+
+    /** Validates and creates the NEW order once per key; {@code next} runs only for a newly created order. */
+    private PlaceOrderResult createOnce(OrderIntent raw, BiFunction<Order, Instrument, Order> next) {
         OrderIntent intent = OrderValidation.normalize(raw);
         Instrument instrument = instruments.find(INSTRUMENT_VENUE, intent.symbol())
                 .orElseThrow(() -> ApiException.badRequest("unknown symbol: " + intent.symbol()));
@@ -93,7 +109,7 @@ public class OrderService {
         } catch (DuplicateKeyException e) {
             return existing(intent, order.clientOrderId(), requestHash);
         }
-        return new PlaceOrderResult(process(order, instrument), true);
+        return new PlaceOrderResult(next.apply(order, instrument), true);
     }
 
     /**

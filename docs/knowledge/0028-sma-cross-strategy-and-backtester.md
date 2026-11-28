@@ -72,7 +72,7 @@ As expected, SMA 20/60 on 1-minute candles whipsaws: about 17 trades a day, and 
 
 ## Follow-ups
 - **Backtest fill timing.** Model the live latency by filling at candle i+2's open, or record live-vs-backtest slippage per trade. The current i+1 open is about 1 minute earlier than live.
-- **Maximum signal age on the consumer side (top priority).** core and risk place an order for any `signal.generated` message, however old. A signal stuck in Kafka while core is down still becomes an order. Add a deterministic age rule on `generated_at`, with an audit record. This has been open since 0026.
+- **Maximum signal age on the consumer side (top priority).** core and risk place an order for any `signal.generated` message, however old. A signal stuck in Kafka while core is down still becomes an order. Add a deterministic age rule on `generated_at`, with an audit record. This has been open since 0026. Superseded by: 0030
 - **Missed candles in live.** Each tick decides only on the newest final candle. When the runner's 60 s loop and core's 60 s sync drift past each other, one candle can be skipped and its cross missed. Fix: decide on every newly final candle since the last one evaluated.
 - **Position read before a pending BUY fills.** If a cross down comes on the next candle, it is missed (a long-only contract). Expiring a stale SELL also leaves the position long until the next cross down.
 - **Funding** is not modelled. There is no walk-forward and no parameter search (Phase 6).

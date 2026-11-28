@@ -1,4 +1,4 @@
-# Base stack, reused on the VPS later (0014). No published ports here.
+# Base stack, reused on the VPS later (0014). Only ui publishes a port (127.0.0.1:8088); scripts/check-compose-ports.sh enforces it.
 # Memory limits are the 0014 budget; check with scripts/check-memory.sh.
 name: vajra
 
@@ -131,10 +131,31 @@ services:
       DB_USER: gateway_svc
       DB_PASSWORD: ${GATEWAY_DB_PASSWORD}
       PORT: 8080
+      GATEWAY_ADMIN_USERNAME: ${GATEWAY_ADMIN_USERNAME}
+      GATEWAY_ADMIN_PASSWORD_HASH: ${GATEWAY_ADMIN_PASSWORD_HASH}
+      GATEWAY_COOKIE_SECURE: ${GATEWAY_COOKIE_SECURE:-true}
+      TRADING_MODE: ${TRADING_MODE:-PAPER}
     depends_on: { postgres: { condition: service_healthy } }
     mem_limit: 384m
     restart: unless-stopped
     healthcheck: *java-health
+
+  # Only published port in the stack; Tailscale serve fronts it on the VPS. Non-root nginx, read-only rootfs.
+  ui:
+    build: { context: ../../ui, dockerfile: Dockerfile }
+    ports: ["127.0.0.1:8088:8080"]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /run]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on: { gateway-bff: { condition: service_healthy } }
+    mem_limit: 32m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 18
 
   signal-service:
     build: { context: ../.., dockerfile: services/python.Dockerfile, args: { SERVICE: shankha, PACKAGE: signal-service, MODULE: signal_service, PORT: 8091 } }
